@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Apple Health Export" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <time>2026-01-01T07:32:20Z</time>
+  </metadata>
+  <trk>
+    <name>Route 2021-10-28 1:57pm</name>
+    <trkseg>
+      <trkpt lon="-77.858918" lat="40.798602"><ele>348.770660</ele><time>2021-10-28T20:57:18Z</time><extensions><speed>0.000000</speed><course>150.701797</course><hAcc>18.275984</hAcc><vAcc>2.439527</vAcc></extensions></trkpt>
+      <trkpt lon="-77.858918" lat="40.798602"><ele>348.770660</ele><time>2021-10-28T20:57:18Z</time><extensions><speed>0.000000</speed><course>150.701797</course><hAcc>18.353521</hAcc><vAcc>2.412410</vAcc></extensions></trkpt>
+      <trkpt lon="-77.858918" lat="40.798602"><ele>348.770660</ele><time>2021-10-28T20:57:19Z</time><extensions><speed>0.000000</speed><course>150.701797</course><hAcc>15.919202</hAcc><vAcc>2.444915</vAcc></extensions></trkpt>
+      <trkpt lon="-77.858918" lat="40.798602"><ele>348.770660</ele><time>2021-10-28T20:57:20Z</time><extensions><speed>0.000000</speed><course>150.701797</course><hAcc>12.593277</hAcc><vAcc>2.365335</vAcc></extensions></trkpt>
+      <trkpt lon="-77.858918" lat="40.798602"><ele>348.770660</ele><time>2021-10-28T20:57:21Z</time><extensions><speed>0.000000</speed><course>150.701797</course><hAcc>12.738091</hAcc><vAcc>2.340288</vAcc></extensions></trkpt>
+      <trkpt lon="-77.858918" lat="40.798602"><ele>348.770660</ele><time>2021-10-28T20:57:22Z</time><extensions><speed>0.000000</speed><course>150.701797</course><hAcc>12.890220</hAcc><vAcc>2.337553</vAcc></extensions></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Apple Health Export" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <time>2026-01-01T07:32:23Z</time>
+  </metadata>
+  <trk>
+    <name>Route 2025-12-27 9:26pm</name>
+    <trkseg>
+      <trkpt lon="-117.201531" lat="32.870327"><ele>105.708214</ele><time>2025-12-28T05:18:39Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>8.204745</hAcc><vAcc>30.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201503" lat="32.870325"><ele>104.271408</ele><time>2025-12-28T05:19:01Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>11.881257</hAcc><vAcc>13.418814</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201522" lat="32.870327"><ele>104.511610</ele><time>2025-12-28T05:20:19Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>8.204745</hAcc><vAcc>30.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201495" lat="32.870360"><ele>103.759531</ele><time>2025-12-28T05:21:47Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>18.860174</hAcc><vAcc>12.688897</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201476" lat="32.870344"><ele>103.627940</ele><time>2025-12-28T05:21:52Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>13.218436</hAcc><vAcc>13.725320</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201476" lat="32.870344"><ele>103.627940</ele><time>2025-12-28T05:21:58Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>9.545450</hAcc><vAcc>13.426245</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201470" lat="32.870376"><ele>103.627940</ele><time>2025-12-28T05:22:03Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>7.299592</hAcc><vAcc>13.238949</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201459" lat="32.870399"><ele>103.530045</ele><time>2025-12-28T05:22:09Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>6.434890</hAcc><vAcc>13.104715</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201446" lat="32.870415"><ele>103.611844</ele><time>2025-12-28T05:22:29Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>17.660201</hAcc><vAcc>3.341773</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201428" lat="32.870415"><ele>103.611844</ele><time>2025-12-28T05:22:35Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>22.925368</hAcc><vAcc>3.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201428" lat="32.870450"><ele>103.471298</ele><time>2025-12-28T05:22:37Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>17.330543</hAcc><vAcc>3.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201428" lat="32.870450"><ele>103.426870</ele><time>2025-12-28T05:22:40Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>19.893302</hAcc><vAcc>13.465683</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201454" lat="32.870484"><ele>103.358589</ele><time>2025-12-28T05:22:44Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>17.287761</hAcc><vAcc>6.851957</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201517" lat="32.870484"><ele>103.270992</ele><time>2025-12-28T05:22:55Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>18.282322</hAcc><vAcc>4.509815</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201614" lat="32.870476"><ele>103.270992</ele><time>2025-12-28T05:22:58Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>17.263602</hAcc><vAcc>3.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201637" lat="32.870476"><ele>103.009462</ele><time>2025-12-28T05:23:00Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>18.065532</hAcc><vAcc>3.746961</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201667" lat="32.870461"><ele>102.634495</ele><time>2025-12-28T05:23:10Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>16.226046</hAcc><vAcc>9.977407</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201701" lat="32.870431"><ele>102.373905</ele><time>2025-12-28T05:23:14Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>15.786025</hAcc><vAcc>9.869249</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201744" lat="32.870407"><ele>102.161395</ele><time>2025-12-28T05:23:18Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>15.496877</hAcc><vAcc>11.213938</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201788" lat="32.870397"><ele>102.036683</ele><time>2025-12-28T05:23:24Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>15.165498</hAcc><vAcc>13.650309</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201855" lat="32.870397"><ele>101.503792</ele><time>2025-12-28T05:23:29Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>14.957479</hAcc><vAcc>13.657246</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201924" lat="32.870397"><ele>100.785219</ele><time>2025-12-28T05:23:33Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>14.825496</hAcc><vAcc>13.267614</vAcc></extensions></trkpt>
+      <trkpt lon="-117.201972" lat="32.870397"><ele>100.542781</ele><time>2025-12-28T05:23:37Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>14.717995</hAcc><vAcc>13.887039</vAcc></extensions></trkpt>
+      <trkpt lon="-117.202057" lat="32.870479"><ele>98.335656</ele><time>2025-12-28T05:24:18Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>16.415079</hAcc><vAcc>30.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.202099" lat="32.870498"><ele>98.234470</ele><time>2025-12-28T05:24:56Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>21.794672</hAcc><vAcc>30.000000</vAcc></extensions></trkpt>
+      <trkpt lon="-117.202099" lat="32.870498"><ele>97.941466</ele><time>2025-12-28T05:26:38Z</time><extensions><speed>-1.000000</speed><course>-1.000000</course><hAcc>14.160254</hAcc><vAcc>30.000000</vAcc></extensions></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

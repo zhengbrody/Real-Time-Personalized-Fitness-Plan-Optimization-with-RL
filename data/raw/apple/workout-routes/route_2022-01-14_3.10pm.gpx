@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Apple Health Export" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <time>2026-01-01T07:32:20Z</time>
+  </metadata>
+  <trk>
+    <name>Route 2022-01-14 3:10pm</name>
+    <trkseg>
+      <trkpt lon="-77.863053" lat="40.792945"><ele>352.037964</ele><time>2022-01-14T23:10:54Z</time><extensions><speed>0.000000</speed><course>72.028694</course><hAcc>5.800158</hAcc><vAcc>2.124417</vAcc></extensions></trkpt>
+      <trkpt lon="-77.863053" lat="40.792945"><ele>352.037964</ele><time>2022-01-14T23:10:55Z</time><extensions><speed>0.000000</speed><course>72.028694</course><hAcc>5.936905</hAcc><vAcc>2.107731</vAcc></extensions></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

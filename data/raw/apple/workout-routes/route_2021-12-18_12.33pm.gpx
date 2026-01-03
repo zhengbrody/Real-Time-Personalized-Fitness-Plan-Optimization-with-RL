@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Apple Health Export" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <time>2026-01-01T07:32:20Z</time>
+  </metadata>
+  <trk>
+    <name>Route 2021-12-18 12:33pm</name>
+    <trkseg>
+      <trkpt lon="-77.853558" lat="40.800762"><ele>322.433685</ele><time>2021-12-18T20:33:27Z</time><extensions><speed>0.000000</speed><course>107.377922</course><hAcc>5.882452</hAcc><vAcc>3.209285</vAcc></extensions></trkpt>
+      <trkpt lon="-77.853558" lat="40.800762"><ele>322.433685</ele><time>2021-12-18T20:33:27Z</time><extensions><speed>0.000000</speed><course>107.377922</course><hAcc>5.848891</hAcc><vAcc>3.219742</vAcc></extensions></trkpt>
+      <trkpt lon="-77.853558" lat="40.800762"><ele>322.433685</ele><time>2021-12-18T20:33:28Z</time><extensions><speed>0.000000</speed><course>107.377922</course><hAcc>5.855251</hAcc><vAcc>3.217932</vAcc></extensions></trkpt>
+      <trkpt lon="-77.853558" lat="40.800762"><ele>322.433685</ele><time>2021-12-18T20:33:29Z</time><extensions><speed>0.000000</speed><course>107.377922</course><hAcc>5.967752</hAcc><vAcc>3.198416</vAcc></extensions></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

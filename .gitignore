@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data
+data/raw/apple_watch_health/*
+data/raw/oura/*
+data/raw/training_logs/*
+data/raw/apple_health/*
+!data/raw/apple_watch_health/README.md
+*.csv
+*.parquet
+*.pkl
+*.h5
+*.hdf5
+*.xml
+
+# Models
+models/
+*.pt
+*.pth
+*.ckpt
+*.model
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Feast
+.feast/
+feature_repo/
+
+# Spark
+spark-warehouse/
+metastore_db/
+
+# Kafka
+kafka-logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
