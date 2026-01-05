@@ -1,88 +1,118 @@
-# 快速开始指南
+# Quick Start Guide
 
-## ✅ 已完成的配置
+## Prerequisites
 
-- ✅ OpenAI API Key已配置
-- ✅ 数据库已初始化
-- ✅ 环境变量已设置
-- ✅ LLM Client已实现
+1. Python 3.8+
+2. OpenAI API Key (configured in `.env` file)
+3. Required packages installed: `pip install -r requirements.txt`
 
-## 🚀 立即运行
+## Running the Application
 
-### 1. 验证配置
+### Option 1: Quick Start (Recommended)
 
 ```bash
-python scripts/setup_project.py
+./start_web.sh
 ```
 
-### 2. 启动API服务器
+This script will:
+- Check if API server is running
+- Start API server if needed
+- Launch web interface
 
+### Option 2: Manual Start
+
+**Terminal 1 - Start API Server:**
 ```bash
 python src/serving/api_server.py
 ```
 
-### 3. 测试推荐API
-
-在另一个终端：
-
+**Terminal 2 - Start Web Interface:**
 ```bash
-curl -X POST "http://localhost:8000/recommend" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "user_001",
-    "state": {
-      "readiness_score": 75,
-      "sleep_score": 80,
-      "hrv": 50,
-      "resting_hr": 60,
-      "fatigue": 5,
-      "activity_score": 70
-    }
-  }'
+streamlit run web_app_en.py
 ```
 
-### 4. 测试健康检查
+### Option 3: Background Mode
 
 ```bash
+# Start API server in background
+python src/serving/api_server.py &
+
+# Start web interface in background
+streamlit run web_app_en.py --server.headless true --server.port 8501 &
+```
+
+## Accessing the Application
+
+Open your browser and go to:
+```
+http://localhost:8501
+```
+
+## Main Features
+
+### 1. Get Recommendation
+- Input your body state data (readiness, sleep, HRV, etc.)
+- Receive personalized training recommendations
+- View safety checks and rationale
+
+### 2. Submit Feedback
+- Rate your completed workouts
+- Provide RPE, mood, and satisfaction scores
+- Help the system learn and improve
+
+### 3. AI Coach Chat (NEW!)
+- Ask questions about your training plan
+- Get motivation and guidance
+- Request plan adjustments
+- Receive personalized coaching
+
+### 4. Data Analysis
+- View historical recommendations
+- Analyze body state trends
+- Download data for further analysis
+
+## System Status
+
+Check if services are running:
+
+```bash
+# Check API server
 curl http://localhost:8000/health
+
+# Check web interface
+curl http://localhost:8501/_stcore/health
 ```
 
-## 📋 已修复的问题
+## Stopping Services
 
-### ✅ P0 - 立即修复
-- ✅ OpenAI API Key配置
-- ✅ 环境变量模板完善
-- ✅ 基础错误处理和日志
-- ✅ LLM Client实现
-- ✅ 数据库初始化
+```bash
+# Stop all services
+pkill -f api_server
+pkill -f streamlit
+```
 
-### ✅ 新增功能
-- ✅ 配置管理模块 (`src/config/`)
-- ✅ LLM Client封装 (`src/agent/llm_client.py`)
-- ✅ 数据库初始化脚本 (`scripts/init_database.py`)
-- ✅ 项目设置脚本 (`scripts/setup_project.py`)
-- ✅ API错误处理和日志
+## Troubleshooting
 
-## 🔧 环境变量
+**API server not responding:**
+```bash
+# Check if running
+ps aux | grep api_server
 
-`.env`文件已创建，包含：
-- OPENAI_API_KEY
-- DATABASE_URL
-- AGENT_MODEL
-- 其他配置
+# Restart
+pkill -f api_server && python src/serving/api_server.py &
+```
 
-## 📊 数据库
+**Web interface not loading:**
+```bash
+# Check if running
+ps aux | grep streamlit
 
-SQLite数据库已初始化：
-- `users` - 用户表
-- `training_sessions` - 训练会话
-- `user_feedback` - 用户反馈
-- `daily_states` - 日度状态
+# Restart
+pkill -f streamlit && streamlit run web_app_en.py &
+```
 
-## 🎯 下一步
+## Next Steps
 
-1. **测试API**: 启动服务器并测试端点
-2. **测试Agent**: 使用Coach Agent功能
-3. **添加测试**: 创建单元测试
-4. **部署**: 配置Docker和部署
-
+- Read [README.md](README.md) for complete project documentation
+- Check [DATA_VIEWING_AND_IOS_INTEGRATION.md](DATA_VIEWING_AND_IOS_INTEGRATION.md) for data viewing and iOS app integration guide
+- Explore the web interface to get personalized recommendations!
