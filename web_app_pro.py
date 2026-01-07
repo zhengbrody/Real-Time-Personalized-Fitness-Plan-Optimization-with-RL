@@ -6,6 +6,7 @@ High-Performance Interface with Real AI Integration
 import streamlit as st
 import requests
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
@@ -461,62 +462,195 @@ with tab_today:
 
 # --- TAB 2: ANALYTICS ---
 with tab_analytics:
-    st.subheader("Performance Trends & System Insights")
+    st.subheader("📊 Performance Trends & System Insights")
 
     if st.session_state.recommendation_history:
         # Create DataFrame from history
         history_data = []
         for item in st.session_state.recommendation_history:
+            rec = item.get('recommendation', item.get('state', {}))
+            state = item.get('state', {})
             history_data.append({
-                'Time': item['timestamp'].strftime('%Y-%m-%d %H:%M'),
-                'Workout': item['recommendation']['workout_type'],
-                'Intensity': item['recommendation']['intensity'],
-                'Duration': item['recommendation']['duration_minutes'],
-                'Readiness': item['state']['readiness_score'],
-                'Sleep': item['state']['sleep_score'],
-                'HRV': item['state']['hrv'],
-                'Fatigue': item['state']['fatigue']
+                'Date': datetime.fromtimestamp(item.get('timestamp', datetime.now().timestamp())),
+                'Workout': rec.get('workout_type', item.get('workout_type', 'Unknown')),
+                'Intensity': rec.get('intensity', item.get('intensity', 'N/A')),
+                'Duration': rec.get('duration_minutes', item.get('duration_minutes', 0)),
+                'Readiness': state.get('readiness_score', 0),
+                'Sleep': state.get('sleep_score', 0),
+                'HRV': state.get('hrv', 0),
+                'RHR': state.get('resting_hr', 0),
+                'Fatigue': state.get('fatigue', 0),
+                'Activity': state.get('activity_score', 0),
+                'Mood': state.get('mood', 5),
+                'Stress': state.get('stress', 5)
             })
 
         df = pd.DataFrame(history_data)
+        df['Date_str'] = df['Date'].dt.strftime('%Y-%m-%d')
 
-        # Metrics Trend Chart
-        st.subheader("📊 Body State Trends")
-        metrics_df = df[['Time', 'Readiness', 'Sleep', 'HRV', 'Fatigue']].copy()
-        metrics_df = metrics_df.set_index('Time')
+        # Summary Statistics
+        st.subheader("📈 7-Day Summary")
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            avg_readiness = df['Readiness'].tail(7).mean()
+            st.metric("Avg Readiness", f"{avg_readiness:.1f}/100",
+                     delta=f"{df['Readiness'].iloc[-1] - avg_readiness:.1f}" if len(df) > 1 else None)
+
+        with col2:
+            avg_hrv = df['HRV'].tail(7).mean()
+            st.metric("Avg HRV", f"{avg_hrv:.1f} ms",
+                     delta=f"{df['HRV'].iloc[-1] - avg_hrv:.1f}" if len(df) > 1 else None)
+
+        with col3:
+            avg_sleep = df['Sleep'].tail(7).mean()
+            st.metric("Avg Sleep Score", f"{avg_sleep:.1f}/100",
+                     delta=f"{df['Sleep'].iloc[-1] - avg_sleep:.1f}" if len(df) > 1 else None)
+
+        with col4:
+            total_duration = df['Duration'].tail(7).sum()
+            st.metric("Total Training", f"{total_duration} min",
+                     delta=f"+{df['Duration'].iloc[-1]}" if len(df) > 0 else None)
+
+        st.divider()
+
+        # Time Range Selector
+        col_range, col_metrics = st.columns([1, 3])
+
+        with col_range:
+            time_range = st.selectbox(
+                "Time Range",
+                ["Last 7 Days", "Last 14 Days", "Last 30 Days", "All Time"],
+                key="analytics_time_range"
+            )
+
+            days_map = {
+                "Last 7 Days": 7,
+                "Last 14 Days": 14,
+                "Last 30 Days": 30,
+                "All Time": len(df)
+            }
+            days = days_map[time_range]
+            df_filtered = df.tail(days)
+
+        with col_metrics:
+            metrics_to_show = st.multiselect(
+                "Select Metrics",
+                ["Readiness", "Sleep", "HRV", "RHR", "Fatigue", "Activity", "Mood", "Stress"],
+                default=["Readiness", "Sleep", "HRV", "Fatigue"],
+                key="metrics_selector"
+            )
+
+        # Main Trends Chart
+        st.subheader("📉 Health Metrics Over Time")
 
         fig = go.Figure()
-        for col in metrics_df.columns:
-            fig.add_trace(go.Scatter(
-                x=metrics_df.index,
-                y=metrics_df[col],
-                mode='lines+markers',
-                name=col
-            ))
+        for metric in metrics_to_show:
+            if metric in df_filtered.columns:
+                fig.add_trace(go.Scatter(
+                    x=df_filtered['Date'],
+                    y=df_filtered[metric],
+                    mode='lines+markers',
+                    name=metric,
+                    line=dict(width=2),
+                    marker=dict(size=6)
+                ))
 
         fig.update_layout(
-            title="Body Metrics Over Time",
-            xaxis_title="Time",
+            title=f"Health Metrics - {time_range}",
+            xaxis_title="Date",
             yaxis_title="Value",
             hovermode='x unified',
-            height=400,
-            template="plotly_white"
+            height=450,
+            template="plotly_white",
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # Workout Distribution
-        col_pie, col_table = st.columns(2)
+        st.divider()
+
+        # Correlation Analysis
+        st.subheader("🔗 Metric Correlations")
+
+        col_corr, col_insights = st.columns([2, 1])
+
+        with col_corr:
+            # Calculate correlation matrix
+            corr_metrics = ['Readiness', 'Sleep', 'HRV', 'Fatigue', 'Activity']
+            corr_df = df_filtered[corr_metrics].corr()
+
+            fig_corr = go.Figure(data=go.Heatmap(
+                z=corr_df.values,
+                x=corr_df.columns,
+                y=corr_df.columns,
+                colorscale='RdBu',
+                zmid=0,
+                text=corr_df.values.round(2),
+                texttemplate='%{text}',
+                textfont={"size": 10},
+                colorbar=dict(title="Correlation")
+            ))
+
+            fig_corr.update_layout(
+                title="Metric Correlation Matrix",
+                height=400,
+                template="plotly_white"
+            )
+
+            st.plotly_chart(fig_corr, use_container_width=True)
+
+        with col_insights:
+            st.markdown("**Key Insights:**")
+
+            # Find strongest correlations
+            corr_flat = corr_df.where(~np.tril(np.ones(corr_df.shape)).astype(bool))
+            strong_corr = corr_flat.stack().sort_values(ascending=False)
+
+            if len(strong_corr) > 0:
+                top_corr = strong_corr.iloc[0]
+                metrics_pair = strong_corr.index[0]
+                st.info(f"**Strongest Correlation:**\n{metrics_pair[0]} ↔ {metrics_pair[1]}\n({top_corr:.2f})")
+
+            # Average scores
+            st.metric("Avg Readiness", f"{df_filtered['Readiness'].mean():.1f}/100")
+            st.metric("Avg Sleep", f"{df_filtered['Sleep'].mean():.1f}/100")
+            st.metric("Avg HRV", f"{df_filtered['HRV'].mean():.1f} ms")
+
+        st.divider()
+
+        # Workout Distribution & Performance
+        col_pie, col_bar = st.columns(2)
 
         with col_pie:
             st.subheader("🏋️ Workout Distribution")
             workout_counts = df['Workout'].value_counts()
             fig2 = px.pie(values=workout_counts.values, names=workout_counts.index, hole=.4)
+            fig2.update_layout(height=350)
             st.plotly_chart(fig2, use_container_width=True)
 
-        with col_table:
-            st.subheader("📋 Recent Sessions")
-            st.dataframe(df.tail(5), use_container_width=True)
+        with col_bar:
+            st.subheader("📊 Training Volume")
+            # Weekly training volume
+            df_weekly = df.groupby(df['Date'].dt.to_period('W'))['Duration'].sum().reset_index()
+            df_weekly['Date'] = df_weekly['Date'].astype(str)
+
+            fig_bar = px.bar(
+                df_weekly,
+                x='Date',
+                y='Duration',
+                title='Weekly Training Minutes',
+                labels={'Duration': 'Minutes', 'Date': 'Week'}
+            )
+            fig_bar.update_layout(height=350)
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.divider()
+
+        # Recent Sessions Table
+        st.subheader("📋 Recent Sessions")
+        st.dataframe(df[['Date', 'Workout', 'Intensity', 'Duration', 'Readiness', 'Sleep', 'HRV']].tail(10), use_container_width=True)
 
         # Download data
         csv = df.to_csv(index=False, encoding='utf-8')
@@ -662,6 +796,120 @@ IMPORTANT: You are NOT a medical professional. If user reports serious symptoms,
 # --- TAB 4: SETTINGS ---
 with tab_settings:
     st.subheader("⚙️ Settings & Configuration")
+
+    # Data Upload Section
+    st.subheader("📤 Upload Health Data")
+    st.markdown("Upload your daily health data from Apple Watch or Oura Ring (no iOS app needed!)")
+
+    upload_tab1, upload_tab2 = st.tabs(["📱 Manual Entry", "📁 File Upload"])
+
+    with upload_tab1:
+        st.write("**Manually input today's data from your devices:**")
+        with st.form("manual_data_upload"):
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.markdown("**Oura Data**")
+                oura_readiness = st.number_input("Readiness Score", 0, 100, 75, key="oura_readiness")
+                oura_sleep = st.number_input("Sleep Score", 0, 100, 80, key="oura_sleep")
+                oura_hrv = st.number_input("HRV (ms)", 20, 100, 50, key="oura_hrv")
+
+            with col2:
+                st.markdown("**Apple Watch Data**")
+                watch_rhr = st.number_input("Resting HR (bpm)", 40, 100, 60, key="watch_rhr")
+                watch_activity = st.number_input("Activity Score", 0, 100, 70, key="watch_activity")
+                watch_exercise = st.number_input("Exercise Minutes", 0, 180, 30, key="watch_exercise")
+
+            with col3:
+                st.markdown("**Subjective**")
+                fatigue_level = st.slider("Fatigue Level", 1, 10, 5, key="fatigue_manual")
+                mood_score = st.slider("Mood", 1, 10, 7, key="mood_manual")
+                stress_level = st.slider("Stress", 1, 10, 5, key="stress_manual")
+
+            submit_manual = st.form_submit_button("💾 Upload Today's Data", use_container_width=True)
+
+            if submit_manual:
+                # Create a recommendation entry
+                new_entry = {
+                    'timestamp': datetime.now().timestamp(),
+                    'state': {
+                        'readiness_score': oura_readiness,
+                        'sleep_score': oura_sleep,
+                        'hrv': oura_hrv,
+                        'resting_hr': watch_rhr,
+                        'activity_score': watch_activity,
+                        'fatigue': fatigue_level,
+                        'mood': mood_score,
+                        'stress': stress_level,
+                        'exercise_minutes': watch_exercise
+                    },
+                    'workout_type': 'Pending',
+                    'intensity': 'TBD',
+                    'duration_minutes': 0,
+                    'source': 'manual_upload'
+                }
+                st.session_state.recommendation_history.append(new_entry)
+                st.success(f"✅ Data uploaded successfully! Total entries: {len(st.session_state.recommendation_history)}")
+                st.rerun()
+
+    with upload_tab2:
+        st.write("**Upload CSV or JSON file with health data:**")
+        uploaded_file = st.file_uploader("Choose a file", type=['csv', 'json'], key="health_data_upload")
+
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    import io
+                    df = pd.read_csv(io.StringIO(uploaded_file.getvalue().decode('utf-8')))
+                    st.success(f"Loaded {len(df)} rows from CSV")
+                    st.dataframe(df.head())
+
+                    if st.button("Import to History"):
+                        for _, row in df.iterrows():
+                            entry = {
+                                'timestamp': datetime.now().timestamp(),
+                                'state': {
+                                    'readiness_score': int(row.get('readiness_score', 75)),
+                                    'sleep_score': int(row.get('sleep_score', 80)),
+                                    'hrv': int(row.get('hrv', 50)),
+                                    'resting_hr': int(row.get('resting_hr', 60)),
+                                    'activity_score': int(row.get('activity_score', 70)),
+                                    'fatigue': int(row.get('fatigue', 5)),
+                                },
+                                'workout_type': row.get('workout_type', 'Unknown'),
+                                'source': 'csv_upload'
+                            }
+                            st.session_state.recommendation_history.append(entry)
+                        st.success(f"Imported {len(df)} entries!")
+                        st.rerun()
+
+                elif uploaded_file.name.endswith('.json'):
+                    import json
+                    data = json.load(uploaded_file)
+                    st.success(f"Loaded JSON with {len(data)} entries")
+                    st.json(data[0] if isinstance(data, list) and len(data) > 0 else data)
+
+                    if st.button("Import to History"):
+                        if isinstance(data, list):
+                            st.session_state.recommendation_history.extend(data)
+                        else:
+                            st.session_state.recommendation_history.append(data)
+                        st.success(f"Imported successfully!")
+                        st.rerun()
+
+            except Exception as e:
+                st.error(f"Error loading file: {str(e)}")
+
+        st.info("""
+        **CSV Format Example:**
+        ```
+        readiness_score,sleep_score,hrv,resting_hr,activity_score,fatigue,workout_type
+        85,90,55,58,75,3,Strength
+        80,85,52,60,70,4,Cardio
+        ```
+        """)
+
+    st.divider()
 
     # User Profile Settings
     st.subheader("👤 User Profile")
