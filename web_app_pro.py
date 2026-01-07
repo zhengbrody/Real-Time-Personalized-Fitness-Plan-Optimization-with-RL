@@ -41,8 +41,115 @@ except Exception as e:
     AI_COACH_ENABLED = False
     print(f"❌ AI Coach disabled: {e}")
 
-# Custom CSS with improved contrast and readability
-st.markdown("""
+# Custom CSS with dark mode support
+dark_mode = st.session_state.get('dark_mode', False)
+
+if dark_mode:
+    # Dark Mode CSS
+    st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif;
+        color: #e0e0e0;
+    }
+
+    .main {
+        background-color: #121212;
+    }
+
+    p, span, div, h1, h2, h3, h4, h5, h6, label {
+        color: #e0e0e0 !important;
+    }
+
+    .stMetric {
+        background-color: #2a2a2a;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #404040;
+    }
+
+    .stMetric label {
+        color: #b0b0b0 !important;
+        font-weight: 600;
+    }
+
+    .stMetric [data-testid="stMetricValue"] {
+        color: #ffffff !important;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .rec-card {
+        background: linear-gradient(135deg, #1f77b4 0%, #0d47a1 100%);
+        color: #ffffff !important;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+
+    .rec-card h3, .rec-card p, .rec-card strong {
+        color: #ffffff !important;
+    }
+
+    .coach-msg {
+        background-color: #2a2a2a;
+        padding: 15px;
+        border-radius: 15px 15px 15px 0px;
+        border: 2px solid #404040;
+        margin-bottom: 10px;
+    }
+
+    .coach-msg b, .coach-msg {
+        color: #e0e0e0 !important;
+        font-weight: 600;
+    }
+
+    .user-msg {
+        background-color: #1f77b4;
+        color: #ffffff !important;
+        padding: 15px;
+        border-radius: 15px 15px 0px 15px;
+        margin-bottom: 10px;
+        text-align: right;
+        border: 2px solid #1565c0;
+    }
+
+    .stButton>button {
+        border-radius: 8px;
+        background-color: #1f77b4;
+        color: white;
+        font-weight: 600;
+        border: none;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #1e1e1e;
+    }
+
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div {
+        color: #e0e0e0 !important;
+    }
+
+    .stTextInput input, .stNumberInput input, .stSelectbox select {
+        color: #e0e0e0 !important;
+        background-color: #2a2a2a !important;
+        border: 1px solid #404040;
+    }
+
+    .stAlert {
+        background-color: #2a2a2a;
+        border-radius: 8px;
+    }
+</style>
+""", unsafe_allow_html=True)
+else:
+    # Light Mode CSS
+    st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
@@ -55,12 +162,10 @@ st.markdown("""
         background-color: #ffffff;
     }
 
-    /* Improve all text visibility */
     p, span, div, h1, h2, h3, h4, h5, h6, label {
         color: #1a1a1a !important;
     }
 
-    /* Card Styling with better contrast */
     .stMetric {
         background-color: #f8f9fa;
         padding: 15px;
@@ -80,7 +185,6 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Recommendation Card with white text on dark background */
     .rec-card {
         background: linear-gradient(135deg, #1f77b4 0%, #0d47a1 100%);
         color: #ffffff !important;
@@ -94,11 +198,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    .rec-card hr {
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    /* Chat Bubbles with high contrast */
     .coach-msg {
         background-color: #f8f9fa;
         padding: 15px;
@@ -122,57 +221,30 @@ st.markdown("""
         border: 2px solid #1565c0;
     }
 
-    .user-msg b, .user-msg {
-        color: #ffffff !important;
-        font-weight: 600;
-    }
-
-    /* Status Indicators - more visible */
-    .status-online {
-        color: #28a745 !important;
-        font-weight: bold;
-        font-size: 1.1rem;
-    }
-    .status-offline {
-        color: #dc3545 !important;
-        font-weight: bold;
-        font-size: 1.1rem;
-    }
-
-    /* Button improvements */
     .stButton>button {
         border-radius: 8px;
-        transition: all 0.3s;
         background-color: #1f77b4;
         color: white;
         font-weight: 600;
         border: none;
     }
 
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(31, 119, 180, 0.3);
-        background-color: #1565c0;
-    }
-
-    /* Sidebar improvements */
-    .css-1d391kg {
+    [data-testid="stSidebar"] {
         background-color: #f8f9fa;
     }
 
-    /* Form labels */
-    .stSlider label, .stCheckbox label, .stRadio label {
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] div {
         color: #1a1a1a !important;
-        font-weight: 600;
     }
 
-    /* Expander header */
-    .streamlit-expanderHeader {
+    .stTextInput input, .stNumberInput input, .stSelectbox select {
         color: #1a1a1a !important;
-        font-weight: 600;
+        background-color: #ffffff !important;
     }
 
-    /* Info/Warning/Success boxes */
     .stAlert {
         border-radius: 8px;
     }
@@ -190,6 +262,10 @@ if 'user_id' not in st.session_state:
     st.session_state.user_id = 'user_001'
 if 'recommendation_history' not in st.session_state:
     st.session_state.recommendation_history = []
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+if 'selected_date' not in st.session_state:
+    st.session_state.selected_date = None
 
 # --- SIDEBAR: BIOMETRIC SYNC STATUS ---
 with st.sidebar:
@@ -232,6 +308,15 @@ with st.sidebar:
         st.subheader("📊 Current State")
         st.progress(state.get('readiness_score', 0)/100, text=f"Readiness: {state.get('readiness_score', 0)}%")
         st.progress(state.get('fatigue', 5)/10, text=f"Fatigue: {state.get('fatigue', 5)}/10")
+
+    st.divider()
+
+    # Dark Mode Toggle
+    st.subheader("🌓 Display Mode")
+    dark_mode_toggle = st.toggle("Dark Mode", value=st.session_state.dark_mode)
+    if dark_mode_toggle != st.session_state.dark_mode:
+        st.session_state.dark_mode = dark_mode_toggle
+        st.rerun()
 
     st.divider()
     st.info("Agent v2.1: Online Learning via Thompson Sampling")
@@ -576,36 +661,122 @@ IMPORTANT: You are NOT a medical professional. If user reports serious symptoms,
 
 # --- TAB 4: SETTINGS ---
 with tab_settings:
-    st.subheader("⚙️ System Configuration")
+    st.subheader("⚙️ Settings & Configuration")
+
+    # User Profile Settings
+    st.subheader("👤 User Profile")
+    col1, col2 = st.columns(2)
+    with col1:
+        user_name = st.text_input("Display Name", value="Athlete", key="user_name_settings")
+        user_age = st.number_input("Age", min_value=18, max_value=100, value=30, key="user_age_settings")
+    with col2:
+        user_weight = st.number_input("Weight (kg)", min_value=40, max_value=200, value=70, key="user_weight_settings")
+        user_height = st.number_input("Height (cm)", min_value=140, max_value=220, value=175, key="user_height_settings")
+
+    st.divider()
+
+    # Historical Data Viewer
+    st.subheader("📅 Historical Data Viewer")
+
+    if st.session_state.recommendation_history:
+        # Date selector
+        dates_available = [datetime.fromtimestamp(rec.get('timestamp', datetime.now().timestamp()))
+                          for rec in st.session_state.recommendation_history]
+
+        selected_date = st.date_input(
+            "Select Date to View",
+            value=max(dates_available).date() if dates_available else datetime.now().date(),
+            key="historical_date_selector"
+        )
+
+        # Filter recommendations for selected date
+        recs_on_date = [
+            rec for rec in st.session_state.recommendation_history
+            if datetime.fromtimestamp(rec.get('timestamp', 0)).date() == selected_date
+        ]
+
+        if recs_on_date:
+            st.success(f"Found {len(recs_on_date)} recommendation(s) on {selected_date}")
+
+            for idx, rec in enumerate(recs_on_date):
+                with st.expander(f"Recommendation #{idx + 1} - {datetime.fromtimestamp(rec.get('timestamp', 0)).strftime('%H:%M:%S')}"):
+                    state = rec.get('state', {})
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Readiness", f"{state.get('readiness_score', 'N/A')}/100")
+                        st.metric("Sleep", f"{state.get('sleep_score', 'N/A')}/100")
+                    with col2:
+                        st.metric("HRV", f"{state.get('hrv', 'N/A')} ms")
+                        st.metric("RHR", f"{state.get('resting_hr', 'N/A')} bpm")
+                    with col3:
+                        st.metric("Workout", rec.get('workout_type', 'N/A'))
+                        st.metric("Duration", f"{rec.get('duration_minutes', 'N/A')} min")
+        else:
+            st.info(f"No data found for {selected_date}")
+    else:
+        st.info("No historical data available yet. Get your first recommendation to start tracking!")
+
+    st.divider()
+
+    # API & System Configuration
+    st.subheader("📡 API & System Status")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("API Server", "🟢 Online" if API_BASE_URL else "🔴 Offline")
+        st.code(f"{API_BASE_URL}", language="text")
+    with col2:
+        st.metric("AI Coach", "🟢 Active" if AI_COACH_ENABLED else "🔴 Offline")
+        st.code(f"Model: {os.getenv('AGENT_MODEL', 'gpt-4')}", language="text")
+
+    st.divider()
+
+    # Data Management
+    st.subheader("💾 Data Management")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("📥 Export History", use_container_width=True):
+            if st.session_state.recommendation_history:
+                import json
+                data_json = json.dumps(st.session_state.recommendation_history, indent=2)
+                st.download_button(
+                    label="Download JSON",
+                    data=data_json,
+                    file_name=f"fitness_history_{datetime.now().strftime('%Y%m%d')}.json",
+                    mime="application/json"
+                )
+            else:
+                st.warning("No data to export")
+
+    with col2:
+        if st.button("🔄 Refresh Stats", use_container_width=True):
+            st.rerun()
+
+    with col3:
+        if st.button("🗑️ Clear History", use_container_width=True):
+            if st.session_state.recommendation_history:
+                st.session_state.recommendation_history = []
+                st.session_state.chat_history = []
+                st.success("History cleared!")
+                st.rerun()
+
+    st.divider()
+
+    # System Information
+    st.subheader("ℹ️ System Information")
 
     st.markdown("""
-    ### Technical Stack
-
-    | Component | Status | Description |
-    | :--- | :--- | :--- |
-    | **Feature Engineering** | Active | 45+ body state features |
-    | **Recommendation Engine** | Hybrid | Contextual Bandits + Rules |
-    | **Model Serving** | FastAPI | Real-time inference |
-    | **RL Algorithm** | Thompson Sampling | Online learning enabled |
-    | **AI Coach** | GPT-4 | Natural language interface |
+    **Technical Stack:**
+    - **Recommendation Engine**: Contextual Bandits + Thompson Sampling
+    - **Feature Engineering**: 45+ body state features
+    - **Model Serving**: FastAPI (Real-time inference)
+    - **AI Coach**: GPT-4 with health data context
+    - **Data Storage**: Local SQLite database
     """)
 
-    st.divider()
-
-    st.subheader("🔐 Privacy & Data")
-    st.info("""
-    - All data stored locally in SQLite database
-    - No cloud sync (unless configured)
-    - Feature store managed via Feast framework
-    - Model updates via feedback loop
-    """)
-
-    st.divider()
-
-    st.subheader("📡 API Configuration")
-    st.code(f"API Base URL: {API_BASE_URL}", language="text")
-    st.code(f"User ID: {st.session_state.user_id}", language="text")
-    st.code(f"AI Coach: {'Enabled' if AI_COACH_ENABLED else 'Disabled'}", language="text")
+    st.caption(f"Total Recommendations: {len(st.session_state.recommendation_history)}")
+    st.caption(f"Chat Messages: {len(st.session_state.chat_history)}")
 
 # --- FOOTER ---
 st.divider()
