@@ -35,12 +35,20 @@ ENV/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# Data
-data/raw/apple_watch_health/*
-data/raw/oura/*
-data/raw/training_logs/*
-data/raw/apple_health/*
-!data/raw/apple_watch_health/README.md
+# Data — personal health data (never commit)
+data/raw/apple/               # Apple Health export (personal data)
+data/raw/apple_watch_health/
+data/raw/apple_health/
+data/raw/OURA/                # Oura Ring data (case-sensitive)
+data/raw/oura/
+data/raw/training_logs/
+data/fitness.db               # SQLite database (may contain personal data)
+data/**/*.db
+
+# GPS routes (personal location data)
+*.gpx
+
+# Generated / binary data files
 *.csv
 *.parquet
 *.pkl

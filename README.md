@@ -1,231 +1,354 @@
-# Real-Time Personalized Fitness Plan Optimization with Reinforcement Learning
+# ProFit AI — Personalized Fitness with Reinforcement Learning
 
-## Project Overview
+> Contextual Bandits + Thompson Sampling · GPT-4 AI Coach · Safety-Constrained RL · FastAPI · Streamlit
 
-This project focuses on building a production-ready personalized fitness plan optimization system that combines rule-based heuristics with reinforcement learning techniques for real-time sequence prediction. The system processes real-time wearable device data (Apple Watch, Oura Ring) and dynamically adjusts training plans based on body state, recovery status, and fitness goals.
+[![CI](https://github.com/your-username/RL/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/RL/actions)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
+
+## Results
+
+> All metrics are from a **reproducible simulation** (N=1,000 episodes, seed=42, synthetic body-state data).
+> Run yourself: `python scripts/benchmark.py --episodes 1000 --seed 42`
+
+| Metric | Random Baseline | Rule-based | **Thompson Sampling** |
+|--------|---------------:|----------:|----------------------:|
+| Mean Reward | 0.601 | 0.618 | **0.643** |
+| Std Reward | 0.229 | 0.218 | **0.200** |
+| Optimal Action Rate | 8.9% | 5.4% | **18.0%** |
+| Overtraining Rate | 0.6% | 0.0% | 0.7% |
+| Late Mean Reward (ep 500–999) | 0.603 | 0.620 | **0.658** |
+
+**+7.0%** cumulative reward over random · **+4.1%** over hand-crafted rules · converges at **~ep 84** · p99 API latency **<50ms**
+
+---
+
+## Problem & Why RL
+
+Generic training programs ignore daily physiological variation. A plan suitable for a well-rested athlete is inappropriate — and potentially harmful — after poor sleep or high accumulated fatigue.
+
+**Why Contextual Bandits instead of supervised learning?**
+
+- No labelled dataset of "correct workouts" exists — feedback is implicit (completion, satisfaction)
+- The reward signal arrives *after* the action, not before
+- The action space is discrete (18 workout options) and safety-constrained
+- Thompson Sampling gives Bayesian uncertainty estimates for free, enabling principled exploration without a separate exploration parameter
+
+**Core design decisions:**
+
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Algorithm | Beta-Bernoulli Thompson Sampling | Sample-efficient, closed-form Bayesian updates |
+| Action space | 18 discrete actions (type × intensity × duration) | Clinically meaningful granularity |
+| Safety layer | Hard-rule filter before bandit selection | RL must never recommend dangerous actions |
+| Reward signal | Weighted composite (completion + adherence + recovery) | Aligns with real training outcomes |
+| Online learning | Kafka-streamed feedback loop | Model improves continuously from real use |
+
+---
+
+## System Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        User Layer                            │
+│   Web UI (Streamlit)  ·  iOS App (future)  ·  API clients   │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+┌──────────────────────────────▼───────────────────────────────┐
+│              API Gateway  (FastAPI)                          │
+│         Authentication · Rate Limiting · Validation          │
+└────────┬──────────────────────────────────────┬──────────────┘
+         │                                      │
+┌────────▼──────────────┐          ┌────────────▼─────────────┐
+│  Recommendation Engine│          │     AI Coach Agent        │
+│                       │          │                           │
+│  1. Safety Gate       │          │  GPT-4 · Tool Calling     │
+│     (hard rules)      │          │  Health data context      │
+│  2. Feature extract   │          │  Conversational interface │
+│  3. Thompson Sampling │          │                           │
+│  4. Action selection  │          └───────────────────────────┘
+└────────┬──────────────┘
+         │
+┌────────▼──────────────────────────────────────────────────────┐
+│                       Data Layer                              │
+│  Feature Store (Feast) · SQLite · Redis cache · Kafka queue   │
+└────────┬──────────────────────────────────────────────────────┘
+         │
+┌────────▼──────────────────────────────────────────────────────┐
+│              External Sources                                 │
+│   Apple HealthKit · Oura Ring API v2 · OpenAI API             │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Data flow:**
+```
+Wearable data / manual entry
+  → 30+ engineered features (HRV trend, sleep debt, ACWR, rolling z-scores)
+  → Safety Gate filters dangerous actions
+  → Thompson Sampling selects from remaining actions
+  → User completes (or skips) workout
+  → Feedback streamed via Kafka
+  → Beta parameters updated → better next recommendation
+```
+
+---
 
 ## Key Components
 
-### 1. Hybrid Fitness Plan Recommendation System
-- Built a hybrid recommendation system combining:
-  - **Rule-based Heuristics**: Similar to collaborative filtering, using predefined training templates based on fitness goals
-  - **Contextual Bandits**: Managing exploration-exploitation tradeoffs to balance trying new exercises vs. sticking with proven plans
-- **Data Sources**: 
-  - Apple Watch data (heart rate, activity, sleep)
-  - Oura Ring data (readiness score, HRV, sleep quality)
-  - Training logs and subjective feedback
-- **Performance**: Achieved **0.85+ AUC** in predicting optimal training plans
+### 1. Thompson Sampling Contextual Bandit
 
-### 2. Feature Store and Model Serving Infrastructure
-- **Feature Store**: Developed using **Feast** framework
-  - Manages over **200 body state and training features**
-  - Features include: heart rate variability, sleep quality, training history, fatigue levels, goal progress
-  - Privacy-preserving feature aggregation
-- **Model Serving**: Deployed API using **TorchServe**
-  - Handles real-time plan generation requests
-  - **p99 latency < 50ms** for instant plan recommendations
-  - Serves personalized training plans based on current body state
+`src/recommendation/contextual_bandits.py`
 
-### 3. Online Learning and A/B Testing
-- **Online Learning Pipeline**: 
-  - Utilizes **Kafka streaming** for real-time wearable device data processing
-  - Implements **incremental Reinforcement Learning updates** using **Thompson sampling**
-  - Continuously adapts to body state changes and training responses
-- **A/B Testing Framework**: 
-  - Tests different training strategies and plan intensities
-  - Demonstrated **15%+ increase in training completion rate**
-  - Adheres to safety constraints (prevents overtraining, respects injury history)
+Beta-Bernoulli model over 18 discrete workout actions. Each action maintains independent Beta(α, β) parameters. At each step:
 
-### 4. AI Coach Agent (Tool-Using LLM Agent)
-- **Daily Coach Agent**: Tool-using AI agent that provides personalized coaching through natural language interaction
-  - **Plan Explanation**: Explains training plan recommendations in natural language, highlighting why specific plans fit the user's current body state
-  - **Feedback Collection**: Collects user feedback (RPE, mood, stress, pain) through conversational interface
-  - **Action Triggers**: Adjusts training plans, schedules recovery days, generates daily summaries, and sets micro-goals
-  - **Closed-Loop Learning**: Logs feedback events to Kafka for continuous model improvement
-- **Safety Guardrails**: 
-  - Hard rules and safety checks prevent dangerous recommendations
-  - Detects overtraining, abnormal physiological signals, and injury risks
-  - Escalates critical safety alerts with recommendations to consult healthcare professionals
-- **Emotional Support**: 
-  - Provides motivational messages and breathing exercises
-  - Generates daily reflections and summaries
-  - Adapts communication style based on user mood and stress levels
-- **Architecture**: Three-layer design (Safety Gate → Recommendation Engine → LLM Agent) ensures reliability while enabling natural interaction
+```python
+# Sample from posterior for each allowed action
+sample = np.random.beta(alpha[action_id], beta[action_id])
+
+# Update after observing binary reward
+alpha[action_id] += 1 if reward > 0.5 else 0
+beta[action_id]  += 0 if reward > 0.5 else 1
+```
+
+Also implements `LinearContextualBandit` with full Bayesian linear regression posterior updates (B matrix, f vector) for continuous reward signals.
+
+### 2. Safety-Constrained Action Filter
+
+`src/safety/safety_gate.py`
+
+Hard rules applied **before** bandit selection — RL cannot override these:
+
+| Condition | Constraint |
+|-----------|-----------|
+| Readiness < 30 or Fatigue > 8 | REST or RECOVERY only |
+| Fatigue > 6 | Max LOW intensity |
+| 3+ consecutive high-load days | Max MEDIUM intensity |
+| HRV below threshold | Restricted action space |
+
+### 3. Feature Engineering Pipeline
+
+`src/feature_store/feature_engineering.py`
+
+30+ physiological features from raw wearable data:
+
+- **Recovery**: HRV 7-day rolling mean, z-score, trend; sleep debt; resting HR deviation from baseline
+- **Load**: Acute:Chronic Workload Ratio (ACWR), 7-day calorie/step sums
+- **Consistency**: Training streak, completion rate, days since last session
+- **Temporal**: Day-of-week, is_weekend (captures weekly periodicity)
+
+### 4. Reward Function
+
+`src/recommendation/reward_fn.py`
+
+Multi-component weighted reward:
+
+```
+reward = 1.0 × completion
+       + 0.5 × adherence_ratio
+       - 1.0 × recovery_decline
+       + 0.3 × satisfaction
+       - 2.0 × overtraining_penalty
+```
+
+### 5. Online Learning Loop
+
+`src/online_learning/loop.py`
+
+Closed loop: state → recommendation → user feedback → Kafka event → Beta parameter update. Kafka is optional — system falls back gracefully to local event log.
+
+### 6. GPT-4 AI Coach
+
+`src/agent/coach_agent.py`
+
+Three-layer architecture:
+1. **Safety Gate** — blocks unsafe queries
+2. **Recommendation Engine** — provides structured plan
+3. **LLM Agent** — translates plan into natural language, handles Q&A
+
+Tool calls available: `adjust_plan()`, `explain_plan()`, `mood_checkin()`, `set_micro_goal()`, `log_event()`.
+
+---
 
 ## Technology Stack
 
-- **Big Data Processing**: PySpark (for multi-user scenarios and feature processing)
-- **Reinforcement Learning**: Contextual Bandits, Thompson Sampling
-- **Feature Engineering**: Feast (Feature Store)
-- **Model Serving**: TorchServe
-- **Streaming**: Apache Kafka
-- **ML Framework**: PyTorch
-- **Data Sources**: Apple HealthKit API, Oura API v2
-- **API Framework**: FastAPI
-- **AI Agent**: LLM with Tool Calling (OpenAI/Anthropic), Function Calling
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| RL Algorithm | Thompson Sampling (Beta-Bernoulli) | Workout recommendation |
+| ML Framework | PyTorch | Model training |
+| Feature Store | Feast | Feature management |
+| Streaming | Apache Kafka | Online learning pipeline |
+| API | FastAPI + Pydantic | Model serving (<50ms p99) |
+| AI Coach | OpenAI GPT-4 | Conversational coaching |
+| Web UI | Streamlit + Plotly | Interactive dashboard |
+| Data Sources | Apple HealthKit, Oura API v2 | Wearable integration |
+| Containerisation | Docker + Docker Compose | One-command deployment |
+| CI/CD | GitHub Actions | Lint, test, security scan |
+| Data Validation | Pydantic schemas | Input quality enforcement |
+| Big Data (future) | PySpark | Multi-user scale-out |
+
+---
+
+## Quick Start
+
+### Option A — Docker (all services, one command)
+
+```bash
+git clone https://github.com/your-username/RL.git && cd RL
+
+# Configure
+cp .env.example .env
+# Edit .env: add OPENAI_API_KEY
+
+# Launch (Web UI + API + Kafka + Redis)
+docker-compose up
+
+# Open
+# Web interface → http://localhost:8501
+# API docs      → http://localhost:8000/docs
+```
+
+### Option B — Local Python
+
+```bash
+pip install -r requirements.txt
+
+cp .env.example .env   # add OPENAI_API_KEY
+
+./start_web.sh         # starts API server + Streamlit
+```
+
+### Option C — Reproduce benchmark only (minimal deps)
+
+```bash
+pip install numpy scipy matplotlib
+python scripts/benchmark.py --episodes 1000 --seed 42
+# → scripts/benchmark_results.json
+# → scripts/benchmark_learning_curve.png
+```
+
+---
 
 ## Project Structure
 
 ```
 RL/
-├── README.md
-├── requirements.txt
-├── env.example
+├── scripts/
+│   ├── benchmark.py                 # ← Reproduce all reported metrics here
+│   └── benchmark_results.json       # Last run results
 ├── src/
+│   ├── recommendation/
+│   │   ├── contextual_bandits.py    # Thompson Sampling (Beta + Linear)
+│   │   ├── hybrid_recommender.py    # Rules + RL hybrid
+│   │   ├── action_space.py          # 18 discrete workout actions
+│   │   └── reward_fn.py             # Multi-component reward
+│   ├── safety/
+│   │   └── safety_gate.py           # Hard-rule action filter
+│   ├── feature_store/
+│   │   └── feature_engineering.py  # 30+ physiological features
+│   ├── serving/
+│   │   └── api_server.py            # FastAPI endpoints
+│   ├── agent/
+│   │   ├── coach_agent.py           # GPT-4 coach (3-layer)
+│   │   ├── safety.py                # LLM safety guardrails
+│   │   └── tools.py                 # Agent tool definitions
+│   ├── online_learning/
+│   │   ├── loop.py                  # Feedback → model update
+│   │   └── kafka_consumer.py        # Streaming pipeline
 │   ├── data_collection/
 │   │   ├── apple_health.py
 │   │   ├── oura_api.py
-│   │   └── training_log.py
-│   ├── recommendation/
-│   │   ├── rule_based.py
-│   │   ├── contextual_bandits.py
-│   │   └── hybrid_recommender.py
-│   ├── feature_store/
-│   │   ├── feast_config.py
-│   │   └── feature_engineering.py
-│   ├── serving/
-│   │   ├── torchserve_handler.py
-│   │   ├── api_server.py
-│   │   └── agent_api.py
-│   ├── agent/
-│   │   ├── coach_agent.py
-│   │   ├── tools.py
-│   │   ├── safety.py
-│   │   └── state.py
-│   ├── online_learning/
-│   │   ├── kafka_consumer.py
-│   │   ├── thompson_sampling.py
-│   │   └── incremental_updates.py
-│   └── ab_testing/
-│       ├── experiment_framework.py
-│       └── safety_constraints.py
-├── notebooks/
-├── tests/
-├── config/
-├── scripts/
-│   └── setup_data_collection.py
-└── data/
-    ├── raw/
-    │   ├── apple_watch_health/    # Place your Apple Health export.xml here
-    │   ├── oura/                   # Oura API data
-    │   └── training_logs/          # Training session logs
-    ├── processed/
-    ├── features/
-    └── public/                     # Public datasets
+│   │   └── preprocess.py
+│   ├── ab_testing/
+│   │   └── experiment_framework.py
+│   └── validation/
+│       └── schemas.py               # Pydantic data schemas
+├── web_app_pro.py                   # Streamlit UI (main)
+├── Dockerfile                       # Multi-stage build
+├── docker-compose.yml               # Full stack deployment
+├── .github/workflows/ci.yml         # GitHub Actions CI
+├── requirements.txt
+├── requirements-dev.txt
+└── .env.example
 ```
+
+---
+
+## Web Interface
+
+[web_app_pro.py](web_app_pro.py) — Streamlit application with four tabs:
+
+| Tab | What it does |
+|-----|-------------|
+| **Recommend** | Input today's body state → get RL recommendation → thumbs up/down feedback |
+| **AI Coach** | GPT-4 chat with full health context; explains recommendations in plain English |
+| **Analytics** | 7/14/30-day trends, HRV/sleep/fatigue correlation heatmap, training volume charts |
+| **Settings** | User profile, historical data viewer, manual data entry, CSV/JSON upload |
+
+Dark/Light mode toggle. No iOS developer account needed — manual data entry covers Apple Watch + Oura Ring values.
+
+---
 
 ## Skills Demonstrated
 
-### Machine Learning Engineering (MLE)
-- ✅ Reinforcement learning algorithms (Contextual Bandits, Thompson Sampling)
-- ✅ Online learning and incremental model updates
-- ✅ Multi-modal data fusion (wearable sensors + subjective feedback)
-- ✅ Model evaluation and metrics (AUC, completion rate, goal achievement)
-- ✅ A/B testing and experimentation framework
-- ✅ Safety constraints in ML systems (preventing overtraining)
+### Machine Learning Engineering
+- Bayesian RL (Beta-Bernoulli + Linear Thompson Sampling)
+- Safety-constrained action selection (hard rules before RL)
+- Multi-component reward design
+- Online learning with incremental model updates
+- Reproducible simulation benchmarking
 
-### Software Engineering (SDE)
-- ✅ Real-time data processing (Kafka streaming)
-- ✅ Feature store architecture (Feast)
-- ✅ High-performance model serving (TorchServe, <50ms latency)
-- ✅ API integration (Apple HealthKit, Oura API)
-- ✅ System optimization and performance tuning
-- ✅ Production ML infrastructure
+### Software Engineering
+- Production API design (FastAPI, Pydantic validation)
+- Event-driven architecture (Kafka streaming)
+- Feature store pattern (Feast)
+- Containerisation with multi-stage Docker builds
+- CI/CD pipeline (GitHub Actions: lint, test, security scan)
 
-## Target Job Roles
+---
 
-This project demonstrates skills suitable for:
+## Honest Limitations
 
-1. **Machine Learning Engineer (MLE)** ⭐ Primary Fit
-   - Strong focus on ML algorithms, model development, and experimentation
-   - Requires deep understanding of RL, online learning, and multi-modal data processing
-   - Personal problem-solving approach shows practical ML application
+| Claim | Reality |
+|-------|---------|
+| Benchmark metrics | Simulated environment, not real users |
+| Kafka / Feast | Integrated in architecture; Kafka has local fallback |
+| iOS integration | Data collection code written; no deployed app |
+| `tests/` directory | Currently empty — unit tests are a known gap |
 
-2. **ML Infrastructure Engineer** ⭐ Secondary Fit
-   - Combines ML expertise with strong systems engineering
-   - Focus on scalable serving, feature stores, and real-time pipelines
-   - Integration of multiple data sources and APIs
+---
 
-3. **Applied Scientist / Research Engineer**
-   - Algorithm research and implementation
-   - A/B testing and experimentation
-   - Safety-aware ML systems
+## Reproducing Results
 
-## Key Metrics & Achievements
-
-- **Model Performance**: 0.85+ AUC in plan recommendation
-- **Serving Performance**: p99 latency < 50ms
-- **Business Impact**: 15%+ increase in training completion rate
-- **Feature Management**: 200+ features (body state, training history, goals)
-- **Real-time Processing**: Continuous adaptation to body state changes
-- **Safety**: Zero overtraining incidents, respects injury constraints
-
-## Data Sources
-
-- **Apple Watch**: Heart rate, activity data, sleep metrics via HealthKit API
-- **Oura Ring**: Readiness score, HRV, sleep quality via Oura API v2
-- **Training Logs**: Exercise selection, sets, reps, weights, RPE, subjective feedback
-
-## Quick Start
-
-### 1. Preprocess Data
 ```bash
-python src/data_collection/preprocess.py
+# Exact command used to generate numbers in this README
+python scripts/benchmark.py --episodes 1000 --seed 42
 ```
 
-### 2. Engineer Features
-```bash
-python src/feature_store/feature_engineering.py
-```
+Raw output saved in [scripts/benchmark_results.json](scripts/benchmark_results.json).
 
-### 3. Train Model
-```bash
-python src/recommendation/train.py
-```
+---
 
-### 4. Start API
-```bash
-python src/serving/api_server.py
-```
+## Future Work
 
-### 5. Explore Data
-```bash
-jupyter notebook notebooks/data_exploration.ipynb
-```
-
-## AI Coach Agent Capabilities
-
-The AI Coach Agent provides the following actions:
-
-### Training Actions
-- **adjust_plan()**: Adjusts training intensity, volume, or schedules rest days based on recovery status
-- **explain_plan()**: Explains training plan recommendations in natural language
-- **generate_warmup_cooldown()**: Generates personalized warmup and cooldown routines
-- **set_micro_goal()**: Sets small daily goals to improve training adherence
-
-### Emotional Support Actions
-- **mood_checkin()**: Collects mood and stress feedback (1-5 scale) and adapts recommendations
-- **reflect_and_summarize()**: Generates daily training and mood summaries with structured insights
-- **breathing_prompt()**: Provides 60-120 second breathing/relaxation guidance
-- **motivational_message()**: Generates motivational messages in different styles (short/long/humorous/rational)
-
-### System Actions
-- **log_event()**: Logs user feedback and completion data to Kafka for online learning
-- **request_more_info()**: Asks users for missing information when data is incomplete
-- **safety_check()**: Performs safety checks and escalates critical alerts
-
-### Safety & Boundaries
-
-**⚠️ Important Disclaimers:**
-- This system is **NOT a medical device** and does **NOT provide medical advice**
-- If you experience chest pain, dizziness, severe discomfort, or abnormal heart rate patterns, **stop training immediately** and consult a healthcare professional
-- The AI agent provides fitness coaching and emotional support but does not diagnose or treat medical conditions
-- All recommendations are based on fitness data and should be used at your own discretion
-
-## Future Improvements
-
+- Unit + integration tests (highest priority)
+- DQN / PPO for fine-grained exercise selection
 - Multi-user support with collaborative filtering
-- Integration with more wearable devices
-- Mobile app for real-time plan updates
-- Advanced RL algorithms (DQN, PPO) for fine-grained control
-- Enhanced agent memory and personalization
+- Native iOS app (HealthKit auto-sync)
+- Model drift monitoring (Evidently AI)
+- Cloud deployment (AWS/GCP + Kubernetes)
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE). Not a medical device. See license for full disclaimers.
+
+---
+
+## Contact
+
+**Author**: [Your Name] · [LinkedIn] · [Email]
+
+⭐ Star if useful · Issues welcome · PRs open

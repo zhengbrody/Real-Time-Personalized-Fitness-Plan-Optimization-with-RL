@@ -1,0 +1,45 @@
+[flake8]
+# ProFit AI Code Style Configuration
+
+# Maximum line length
+max-line-length = 100
+
+# Exclude directories
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    ENV,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .tox,
+    .pytest_cache,
+    .mypy_cache,
+    notebooks
+
+# Ignore specific errors
+ignore =
+    # E203: whitespace before ':' (conflicts with Black)
+    E203,
+    # W503: line break before binary operator (conflicts with Black)
+    W503,
+    # E501: line too long (handled by Black)
+    E501,
+    # E231: missing whitespace after ',' (conflicts with Black)
+    E231
+
+# Maximum complexity
+max-complexity = 10
+
+# Show source code for errors
+show-source = True
+
+# Show violation statistics
+statistics = True
+
+# Count errors
+count = True
