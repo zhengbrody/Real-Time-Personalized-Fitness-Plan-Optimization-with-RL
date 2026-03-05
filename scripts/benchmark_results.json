@@ -1,0 +1,47 @@
+{
+  "config": {
+    "n_episodes": 1000,
+    "seed": 42,
+    "note": "Simulated environment. Synthetic body-state data generated with weekly periodicity + Gaussian noise. Reward encodes domain knowledge: high-readiness states reward high-intensity; fatigue/low-readiness reward rest."
+  },
+  "metrics": {
+    "Random Baseline": {
+      "mean_reward": 0.6012617621908528,
+      "std_reward": 0.22896605695814254,
+      "cumulative_reward": 601.2617621908528,
+      "optimal_action_rate": 0.089,
+      "overtraining_rate": 0.006,
+      "first_half_mean_reward": 0.5997394432699747,
+      "second_half_mean_reward": 0.6027840811117308,
+      "learning_improvement": 0.003044637841756015
+    },
+    "Rule-based Heuristic": {
+      "mean_reward": 0.6179841105012067,
+      "std_reward": 0.21797547706329384,
+      "cumulative_reward": 617.9841105012067,
+      "optimal_action_rate": 0.054,
+      "overtraining_rate": 0.0,
+      "first_half_mean_reward": 0.6161325916294437,
+      "second_half_mean_reward": 0.6198356293729698,
+      "learning_improvement": 0.003703037743526094
+    },
+    "Thompson Sampling (ProFit AI)": {
+      "mean_reward": 0.6384879867841,
+      "std_reward": 0.19244533113730938,
+      "cumulative_reward": 638.4879867841,
+      "optimal_action_rate": 0.097,
+      "overtraining_rate": 0.002,
+      "first_half_mean_reward": 0.637239443269975,
+      "second_half_mean_reward": 0.6397365302982253,
+      "learning_improvement": 0.0024970870282503554
+    }
+  },
+  "summary": {
+    "ts_improvement_vs_random_pct": 6.19,
+    "ts_improvement_vs_rule_pct": 3.32,
+    "ts_within_run_learning": 0.0025,
+    "convergence_episode": 84,
+    "ts_overtraining_rate": 0.002,
+    "rule_overtraining_rate": 0.0
+  }
+}

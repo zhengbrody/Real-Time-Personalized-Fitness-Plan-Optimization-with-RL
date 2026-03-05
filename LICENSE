@@ -1,0 +1,53 @@
+MIT License
+
+Copyright (c) 2025 ProFit AI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+IMPORTANT NOTICES:
+
+1. MEDICAL DISCLAIMER:
+   This software is NOT a medical device and does NOT provide medical advice.
+   It is designed for educational and research purposes only. Users should
+   consult qualified healthcare professionals before starting any fitness program.
+
+2. HEALTH & FITNESS DISCLAIMER:
+   - The recommendations provided by this software are based on machine learning
+     algorithms and should not replace professional medical or fitness advice.
+   - Users exercise at their own risk. Stop immediately if you experience chest
+     pain, dizziness, or severe discomfort.
+   - This software does not diagnose, treat, cure, or prevent any disease.
+
+3. DATA PRIVACY:
+   - Users are responsible for ensuring compliance with applicable privacy laws
+     (GDPR, HIPAA, etc.) when handling personal health data.
+   - This software stores health data locally by default. Ensure proper security
+     measures are in place for production deployments.
+
+4. THIRD-PARTY SERVICES:
+   - This software may integrate with third-party APIs (Apple HealthKit, Oura API,
+     OpenAI API). Users must comply with those services' terms of service.
+   - API usage costs (e.g., OpenAI) are the responsibility of the user.
+
+5. LIABILITY:
+   - The authors and copyright holders are not liable for any injuries, damages,
+     or adverse effects resulting from use of this software.
+   - Use this software at your own discretion and risk.

@@ -1,0 +1,50 @@
+# Core ML Libraries
+torch>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+
+# Spark and Big Data
+pyspark>=3.4.0
+
+# Feature Store
+feast>=0.36.0
+
+# Model Serving
+torchserve>=0.8.0
+torch-model-archiver>=0.8.0
+
+# Streaming
+kafka-python>=2.0.2
+confluent-kafka>=2.3.0
+
+# API and Web Framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+
+# Data Processing
+pandas>=2.0.0
+pyarrow>=12.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0
+tqdm>=4.66.0
+
+# Data Collection
+# python-oura>=2.0.0  # Optional: Install manually if needed: pip install python-oura
+schedule>=1.2.0
+
+# AI Agent / LLM
+openai>=1.0.0
+anthropic>=0.18.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
