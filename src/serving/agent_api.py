@@ -13,7 +13,7 @@ import sys
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent import CoachAgent
+from src.agent import CoachAgent  # noqa: E402
 
 app = FastAPI(title="AI Coach Agent API")
 
@@ -23,12 +23,14 @@ agent = CoachAgent()
 
 class ChatRequest(BaseModel):
     """Chat request model."""
+
     user_id: str
     message: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     """Chat response model."""
+
     message: str
     plan: Optional[Dict] = None
     tools_called: List[Dict] = []
@@ -39,24 +41,23 @@ class ChatResponse(BaseModel):
 async def chat_with_agent(request: ChatRequest):
     """
     Chat with the AI Coach Agent.
-    
+
     Args:
         request: Chat request with user_id and optional message
-    
+
     Returns:
         Agent response with message, plan, and tool calls
     """
     try:
         response = agent.process_daily_coaching(
-            user_id=request.user_id,
-            user_message=request.message
+            user_id=request.user_id, user_message=request.message
         )
-        
+
         return ChatResponse(
-            message=response.get('message', ''),
-            plan=response.get('plan'),
-            tools_called=response.get('tools_called', []),
-            safety_alert=response.get('safety_alert'),
+            message=response.get("message", ""),
+            plan=response.get("plan"),
+            tools_called=response.get("tools_called", []),
+            safety_alert=response.get("safety_alert"),
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -66,20 +67,20 @@ async def chat_with_agent(request: ChatRequest):
 async def get_daily_plan(user_id: str):
     """
     Get daily coaching plan and message.
-    
+
     Args:
         user_id: User identifier
-    
+
     Returns:
         Daily plan and coaching message
     """
     try:
         response = agent.process_daily_coaching(user_id=user_id)
-        
+
         return {
-            'plan': response.get('plan'),
-            'message': response.get('message'),
-            'tools_called': response.get('tools_called', []),
+            "plan": response.get("plan"),
+            "message": response.get("message"),
+            "tools_called": response.get("tools_called", []),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -93,5 +94,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
 
+    uvicorn.run(app, host="0.0.0.0", port=8001)  # nosec B104

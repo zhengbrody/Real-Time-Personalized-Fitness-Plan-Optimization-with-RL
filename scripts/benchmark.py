@@ -30,18 +30,16 @@ from dataclasses import dataclass
 from typing import List, Dict
 
 # Add project root to path
-ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import only the core ML components (no LLM/Kafka/dotenv dependency)
-from src.recommendation.action_space import ActionSpace, Action
-from src.recommendation.contextual_bandits import ContextualBandit
-from src.recommendation.reward_fn import RewardFunction
-
+from src.recommendation.action_space import ActionSpace, Action  # noqa: E402
+from src.recommendation.contextual_bandits import ContextualBandit  # noqa: E402
 
 # ──────────────────────────────────────────────
 # Minimal Rule-based recommender (inline, no import chain)
 # ──────────────────────────────────────────────
+
 
 class _MinimalSafetyFilter:
     """Safety filter reproduced inline to avoid heavy import chain."""
@@ -53,19 +51,27 @@ class _MinimalSafetyFilter:
 
         if r < 30 or f > 8:
             # Critical: REST or RECOVERY only
-            return [i for i in all_ids
-                    if action_space.get_action(i).workout_type in ("REST", "RECOVERY")]
+            return [
+                i
+                for i in all_ids
+                if action_space.get_action(i).workout_type in ("REST", "RECOVERY")
+            ]
         if f > 6:
             # Fatigued: max LOW intensity
-            return [i for i in all_ids
-                    if action_space.get_action(i).intensity in ("NONE", "LOW")]
+            return [
+                i
+                for i in all_ids
+                if action_space.get_action(i).intensity in ("NONE", "LOW")
+            ]
         return all_ids  # all actions allowed
 
 
 _SAFETY = _MinimalSafetyFilter()
 
 
-def _rule_based_action(state: Dict, allowed: List[int], action_space: ActionSpace) -> int:
+def _rule_based_action(
+    state: Dict, allowed: List[int], action_space: ActionSpace
+) -> int:
     r = state.get("readiness_score", 50)
     f = state.get("fatigue", 5)
     days = state.get("days_since_training", 1)
@@ -75,7 +81,9 @@ def _rule_based_action(state: Dict, allowed: List[int], action_space: ActionSpac
         return 0  # REST
 
     if f >= 7:
-        rec = [a for a in allowed if action_space.get_action(a).workout_type == "RECOVERY"]
+        rec = [
+            a for a in allowed if action_space.get_action(a).workout_type == "RECOVERY"
+        ]
         if rec:
             return rec[0]
 
@@ -94,6 +102,7 @@ def _rule_based_action(state: Dict, allowed: List[int], action_space: ActionSpac
 # ──────────────────────────────────────────────
 # Simulated User Environment
 # ──────────────────────────────────────────────
+
 
 def generate_body_state(rng: np.random.Generator, day: int) -> Dict:
     """
@@ -185,6 +194,7 @@ def simulate_reward(state: Dict, action: Action, rng: np.random.Generator) -> fl
 # Agents
 # ──────────────────────────────────────────────
 
+
 class RandomAgent:
     name = "Random Baseline"
 
@@ -223,15 +233,17 @@ class ThompsonAgent:
 
     def select_action(self, state: Dict) -> int:
         allowed = _SAFETY.filter_actions(state, self.action_space)
-        context = np.array([
-            state.get("readiness_score", 50) / 100.0,
-            state.get("sleep_score", 50) / 100.0,
-            state.get("activity_score", 50) / 100.0,
-            state.get("hrv", 50) / 100.0,
-            state.get("resting_hr", 60) / 100.0,
-            state.get("fatigue", 5) / 10.0,
-            state.get("days_since_training", 1) / 7.0,
-        ])
+        context = np.array(
+            [
+                state.get("readiness_score", 50) / 100.0,
+                state.get("sleep_score", 50) / 100.0,
+                state.get("activity_score", 50) / 100.0,
+                state.get("hrv", 50) / 100.0,
+                state.get("resting_hr", 60) / 100.0,
+                state.get("fatigue", 5) / 10.0,
+                state.get("days_since_training", 1) / 7.0,
+            ]
+        )
         return self.bandit.select_action(context, allowed)
 
     def update(self, action_id, state, reward):
@@ -241,6 +253,7 @@ class ThompsonAgent:
 # ──────────────────────────────────────────────
 # Evaluation
 # ──────────────────────────────────────────────
+
 
 @dataclass
 class EpisodeResult:
@@ -252,7 +265,9 @@ class EpisodeResult:
     is_overtraining: bool
 
 
-def run_experiment(agent, n_episodes: int, seed: int, action_space: ActionSpace) -> List[EpisodeResult]:
+def run_experiment(
+    agent, n_episodes: int, seed: int, action_space: ActionSpace
+) -> List[EpisodeResult]:
     rng = np.random.default_rng(seed)
     results = []
     for ep in range(n_episodes):
@@ -261,16 +276,20 @@ def run_experiment(agent, n_episodes: int, seed: int, action_space: ActionSpace)
         action = action_space.get_action(action_id)
         reward = simulate_reward(state, action, rng)
         optimal = compute_optimal_action(state, action_space)
-        overtraining = (
-            action.intensity == "HIGH"
-            and (state["fatigue"] > 7 or state["readiness_score"] < 40)
+        overtraining = action.intensity == "HIGH" and (
+            state["fatigue"] > 7 or state["readiness_score"] < 40
         )
         agent.update(action_id, state, reward)
-        results.append(EpisodeResult(
-            episode=ep, action_id=action_id, optimal_action_id=optimal,
-            reward=reward, is_optimal=(action_id == optimal),
-            is_overtraining=overtraining,
-        ))
+        results.append(
+            EpisodeResult(
+                episode=ep,
+                action_id=action_id,
+                optimal_action_id=optimal,
+                reward=reward,
+                is_optimal=(action_id == optimal),
+                is_overtraining=overtraining,
+            )
+        )
     return results
 
 
@@ -278,7 +297,7 @@ def rolling_mean(values: List[float], window: int = 50) -> List[float]:
     out = []
     for i in range(len(values)):
         start = max(0, i - window + 1)
-        out.append(float(np.mean(values[start:i+1])))
+        out.append(float(np.mean(values[start : i + 1])))
     return out
 
 
@@ -318,6 +337,7 @@ def convergence_episode(results: List[EpisodeResult], window=50) -> int:
 # Main
 # ──────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="ProFit AI Benchmark")
     parser.add_argument("--episodes", type=int, default=1000)
@@ -354,7 +374,7 @@ def main():
 
     rand_m = all_metrics["Random Baseline"]
     rule_m = all_metrics["Rule-based Heuristic"]
-    ts_m   = all_metrics["Thompson Sampling (ProFit AI)"]
+    ts_m = all_metrics["Thompson Sampling (ProFit AI)"]
 
     ts_vs_rand = pct_improvement(ts_m, rand_m)
     ts_vs_rule = pct_improvement(ts_m, rule_m)
@@ -368,13 +388,55 @@ def main():
     print("  " + "-" * 68)
 
     rows = [
-        ("Mean Reward",              rand_m["mean_reward"],          rule_m["mean_reward"],          ts_m["mean_reward"],          ".4f"),
-        ("Std Reward",               rand_m["std_reward"],           rule_m["std_reward"],           ts_m["std_reward"],           ".4f"),
-        ("Cumulative Reward",        rand_m["cumulative_reward"],    rule_m["cumulative_reward"],    ts_m["cumulative_reward"],    ".1f"),
-        ("Optimal Action Rate",      rand_m["optimal_action_rate"],  rule_m["optimal_action_rate"],  ts_m["optimal_action_rate"],  ".4f"),
-        ("Overtraining Rate",        rand_m["overtraining_rate"],    rule_m["overtraining_rate"],    ts_m["overtraining_rate"],    ".4f"),
-        ("Early Mean (ep 0-499)",    rand_m["first_half_mean_reward"],  rule_m["first_half_mean_reward"],  ts_m["first_half_mean_reward"],  ".4f"),
-        ("Late Mean  (ep 500-999)",  rand_m["second_half_mean_reward"], rule_m["second_half_mean_reward"], ts_m["second_half_mean_reward"], ".4f"),
+        (
+            "Mean Reward",
+            rand_m["mean_reward"],
+            rule_m["mean_reward"],
+            ts_m["mean_reward"],
+            ".4f",
+        ),
+        (
+            "Std Reward",
+            rand_m["std_reward"],
+            rule_m["std_reward"],
+            ts_m["std_reward"],
+            ".4f",
+        ),
+        (
+            "Cumulative Reward",
+            rand_m["cumulative_reward"],
+            rule_m["cumulative_reward"],
+            ts_m["cumulative_reward"],
+            ".1f",
+        ),
+        (
+            "Optimal Action Rate",
+            rand_m["optimal_action_rate"],
+            rule_m["optimal_action_rate"],
+            ts_m["optimal_action_rate"],
+            ".4f",
+        ),
+        (
+            "Overtraining Rate",
+            rand_m["overtraining_rate"],
+            rule_m["overtraining_rate"],
+            ts_m["overtraining_rate"],
+            ".4f",
+        ),
+        (
+            "Early Mean (ep 0-499)",
+            rand_m["first_half_mean_reward"],
+            rule_m["first_half_mean_reward"],
+            ts_m["first_half_mean_reward"],
+            ".4f",
+        ),
+        (
+            "Late Mean  (ep 500-999)",
+            rand_m["second_half_mean_reward"],
+            rule_m["second_half_mean_reward"],
+            ts_m["second_half_mean_reward"],
+            ".4f",
+        ),
     ]
 
     for label, rv, rulev, tsv, fmt in rows:
@@ -385,8 +447,12 @@ def main():
     print("  " + "-" * 68)
     print(f"  Thompson Sampling vs Random:   {ts_vs_rand:+.1f}% mean reward")
     print(f"  Thompson Sampling vs Rules:    {ts_vs_rule:+.1f}% mean reward")
-    print(f"  TS within-run improvement:    {ts_m['learning_improvement']:+.4f} reward (early → late)")
-    print(f"  Overtraining rate: TS {ts_m['overtraining_rate']:.1%}  vs  Rule {rule_m['overtraining_rate']:.1%}  vs  Random {rand_m['overtraining_rate']:.1%}")
+    print(
+        f"  TS within-run improvement:    {ts_m['learning_improvement']:+.4f} reward (early → late)"
+    )
+    print(
+        f"  Overtraining rate: TS {ts_m['overtraining_rate']:.1%}  vs  Rule {rule_m['overtraining_rate']:.1%}  vs  Random {rand_m['overtraining_rate']:.1%}"
+    )
     print(f"  Convergence approx episode:   ~{conv}")
 
     # Save results
@@ -414,7 +480,7 @@ def main():
         },
     }
 
-    out_path = ROOT / "scripts" / "benchmark_results.json"
+    out_path = Path(__file__).parent / "benchmark_results.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w") as f:
         json.dump(output, f, indent=2)
@@ -424,6 +490,7 @@ def main():
     if not args.no_plot:
         try:
             import matplotlib
+
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
 
@@ -433,12 +500,21 @@ def main():
                 "Thompson Sampling (ProFit AI)": "#27ae60",
             }
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-            fig.suptitle("ProFit AI — Simulated Benchmark  (synthetic data, no real users)", fontsize=12)
+            fig.suptitle(
+                "ProFit AI — Simulated Benchmark  (synthetic data, no real users)",
+                fontsize=12,
+            )
 
             for name, metrics in all_metrics.items():
-                ax1.plot(metrics["rolling_rewards"], label=name,
-                         color=colors[name], linewidth=1.8)
-            ax1.axvline(x=500, color="gray", linestyle="--", alpha=0.5, label="Midpoint")
+                ax1.plot(
+                    metrics["rolling_rewards"],
+                    label=name,
+                    color=colors[name],
+                    linewidth=1.8,
+                )
+            ax1.axvline(
+                x=500, color="gray", linestyle="--", alpha=0.5, label="Midpoint"
+            )
             ax1.set_xlabel("Episode")
             ax1.set_ylabel("Rolling Mean Reward (window=50)")
             ax1.set_title("Learning Curves")
@@ -447,19 +523,31 @@ def main():
 
             short = ["Random", "Rule-based", "Thompson\nSampling"]
             means = [all_metrics[n]["mean_reward"] for n in [a.name for a in agents]]
-            stds  = [all_metrics[n]["std_reward"]  for n in [a.name for a in agents]]
-            bars  = ax2.bar(short, means, yerr=stds, capsize=5,
-                            color=[colors[a.name] for a in agents],
-                            edgecolor="black", linewidth=0.8)
+            stds = [all_metrics[n]["std_reward"] for n in [a.name for a in agents]]
+            bars = ax2.bar(
+                short,
+                means,
+                yerr=stds,
+                capsize=5,
+                color=[colors[a.name] for a in agents],
+                edgecolor="black",
+                linewidth=0.8,
+            )
             ax2.set_ylabel("Mean Reward ± Std")
             ax2.set_title("Final Performance")
             ax2.grid(True, axis="y", alpha=0.3)
             for bar, v in zip(bars, means):
-                ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.005,
-                         f"{v:.3f}", ha="center", va="bottom", fontsize=9)
+                ax2.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.005,
+                    f"{v:.3f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=9,
+                )
 
             plt.tight_layout()
-            plot_path = ROOT / "scripts" / "benchmark_learning_curve.png"
+            plot_path = Path(__file__).parent / "benchmark_learning_curve.png"
             plt.savefig(plot_path, dpi=150, bbox_inches="tight")
             print(f"  Plot saved    → {plot_path}")
 

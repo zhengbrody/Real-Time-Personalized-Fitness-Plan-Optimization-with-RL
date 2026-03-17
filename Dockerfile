@@ -9,10 +9,12 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    build-essential \
     gcc \
     g++ \
     curl \
     git \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -125,16 +127,17 @@ CMD ["/bin/bash"]
 # ============================================
 # Production Stage (optimized, minimal)
 # ============================================
-FROM python:3.11-alpine as production
+FROM python:3.11-slim as production
 
 WORKDIR /app
 
-# Install minimal system dependencies
-RUN apk add --no-cache \
+# Install system dependencies (slim has glibc for compiled packages)
+RUN apt-get update && apt-get install -y \
     gcc \
-    musl-dev \
+    g++ \
     libffi-dev \
-    curl
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
 COPY requirements.txt .
@@ -146,7 +149,7 @@ COPY src/ ./src/
 COPY models/ ./models/
 
 # Create non-root user
-RUN adduser -D -u 1000 profit && \
+RUN useradd --no-create-home --uid 1000 profit && \
     chown -R profit:profit /app
 
 # Switch to non-root user

@@ -6,21 +6,19 @@ Serves recommendations and handles user interactions.
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Dict
 import sys
 import logging
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src.recommendation.hybrid_recommender import HybridRecommender
-from src.feature_store.feature_engineering import FeatureEngineer
-from src.online_learning.loop import OnlineLearningLoop
+from src.recommendation.hybrid_recommender import HybridRecommender  # noqa: E402
+from src.online_learning.loop import OnlineLearningLoop  # noqa: E402
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -38,12 +36,14 @@ except Exception as e:
 
 class RecommendationRequest(BaseModel):
     """Request for recommendation."""
+
     user_id: str
     state: Dict
 
 
 class FeedbackRequest(BaseModel):
     """Feedback request."""
+
     user_id: str
     action_id: int
     feedback: Dict
@@ -53,18 +53,17 @@ class FeedbackRequest(BaseModel):
 async def get_recommendation(request: RecommendationRequest):
     """
     Get training plan recommendation.
-    
+
     Args:
         request: User ID and current state
-    
+
     Returns:
         Recommended training plan
     """
     try:
         logger.info(f"Recommendation request for user: {request.user_id}")
         recommendation = learning_loop.process_daily_cycle(
-            request.user_id,
-            request.state
+            request.user_id, request.state
         )
         return recommendation
     except Exception as e:
@@ -76,19 +75,19 @@ async def get_recommendation(request: RecommendationRequest):
 async def submit_feedback(request: FeedbackRequest):
     """
     Submit user feedback.
-    
+
     Args:
         request: User ID, action ID, and feedback
-    
+
     Returns:
         Computed reward
     """
     try:
-        logger.info(f"Feedback from user: {request.user_id}, action: {request.action_id}")
+        logger.info(
+            f"Feedback from user: {request.user_id}, action: {request.action_id}"
+        )
         reward = learning_loop.process_feedback(
-            request.user_id,
-            request.action_id,
-            request.feedback
+            request.user_id, request.action_id, request.feedback
         )
         return {"reward": reward, "status": "updated"}
     except Exception as e:
@@ -100,7 +99,7 @@ async def submit_feedback(request: FeedbackRequest):
 async def health_check():
     """
     Health check endpoint.
-    
+
     Returns:
         Status of API and dependencies
     """
@@ -111,7 +110,7 @@ async def health_check():
             "recommender": "initialized" if recommender else "not initialized",
             "learning_loop": "initialized" if learning_loop else "not initialized",
         }
-        
+
         # Try a simple recommendation to verify functionality
         test_state = {
             "readiness_score": 75,
@@ -120,19 +119,17 @@ async def health_check():
             "resting_hr": 60,
             "fatigue": 5,
         }
-        test_rec = recommender.recommend(test_state)
+        recommender.recommend(test_state)
         status["test_recommendation"] = "working"
-        
+
         return status
     except Exception as e:
         logger.error(f"Health check error: {e}")
-        return {
-            "status": "unhealthy",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "error": str(e)}
 
 
 if __name__ == "__main__":
     import uvicorn
+
     logger.info("Starting API server on http://0.0.0.0:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # nosec B104

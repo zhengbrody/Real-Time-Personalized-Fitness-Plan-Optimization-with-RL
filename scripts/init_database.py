@@ -9,24 +9,24 @@ import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.config import DATABASE_URL
+from src.config import DATABASE_URL  # noqa: E402
 
 
 def init_database():
     """Initialize SQLite database with required tables."""
-    
+
     # Parse SQLite URL
     if DATABASE_URL.startswith("sqlite:///"):
         db_path = DATABASE_URL.replace("sqlite:///", "")
     else:
         db_path = "data/fitness.db"
-    
+
     # Create directory if needed
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
     # Users table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -35,7 +35,7 @@ def init_database():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     # Training sessions table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS training_sessions (
@@ -55,7 +55,7 @@ def init_database():
             FOREIGN KEY (user_id) REFERENCES users(user_id)
         )
     """)
-    
+
     # User feedback table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS user_feedback (
@@ -71,7 +71,7 @@ def init_database():
             FOREIGN KEY (session_id) REFERENCES training_sessions(session_id)
         )
     """)
-    
+
     # Daily states table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_states (
@@ -89,19 +89,24 @@ def init_database():
             UNIQUE(user_id, date)
         )
     """)
-    
+
     # Create indexes
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_date ON training_sessions(user_id, date)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_feedback_user ON user_feedback(user_id)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_states_user_date ON daily_states(user_id, date)")
-    
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sessions_user_date ON training_sessions(user_id, date)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_feedback_user ON user_feedback(user_id)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_states_user_date ON daily_states(user_id, date)"
+    )
+
     conn.commit()
     conn.close()
-    
+
     print(f"✅ Database initialized at: {db_path}")
     print("✅ Tables created: users, training_sessions, user_feedback, daily_states")
 
 
 if __name__ == "__main__":
     init_database()
-

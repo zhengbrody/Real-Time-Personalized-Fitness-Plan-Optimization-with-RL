@@ -15,17 +15,17 @@ from .training_log import TrainingLogger
 
 # Import Oura API (optional - requires python-oura)
 try:
-    from .oura_api import OuraDataCollector
+    from .oura_api import OuraDataCollector  # noqa: F401
+
     __all__ = [
-        'OuraDataCollector',
-        'AppleHealthParser',
-        'TrainingLogger',
+        "OuraDataCollector",
+        "AppleHealthParser",
+        "TrainingLogger",
     ]
 except ImportError:
     # Oura API not available (python-oura not installed)
     # This is OK if you already have Oura CSV data
     __all__ = [
-        'AppleHealthParser',
-        'TrainingLogger',
+        "AppleHealthParser",
+        "TrainingLogger",
     ]
-

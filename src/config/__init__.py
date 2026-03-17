@@ -31,4 +31,3 @@ SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
 
 # Environment
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-
