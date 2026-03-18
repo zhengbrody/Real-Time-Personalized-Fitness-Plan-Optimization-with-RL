@@ -422,37 +422,20 @@ with tab_today:
                     },
                 }
 
-                try:
-                    with st.spinner("Generating recommendation..."):
-                        recommendation = None
-                        # Try API server first
-                        try:
-                            response = requests.post(
-                                f"{API_BASE_URL}/recommend", json=request_data, timeout=5
-                            )
-                            if response.status_code == 200:
-                                recommendation = response.json()
-                        except Exception:
-                            pass
-
-                        # Fallback: run Thompson Sampling locally
-                        if recommendation is None:
-                            recommendation = _get_local_recommendation(request_data["state"])
-
-                        if recommendation:
-                            st.session_state.current_plan = recommendation
-                            st.session_state.recommendation_history.append(
-                                {
-                                    "timestamp": datetime.now(),
-                                    "recommendation": recommendation,
-                                    "state": request_data["state"],
-                                }
-                            )
-                            st.success("✅ Plan generated!")
-                        else:
-                            st.error("❌ Could not generate recommendation")
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
+                with st.spinner("Generating recommendation..."):
+                    recommendation = _get_local_recommendation(request_data["state"])
+                    if recommendation:
+                        st.session_state.current_plan = recommendation
+                        st.session_state.recommendation_history.append(
+                            {
+                                "timestamp": datetime.now(),
+                                "recommendation": recommendation,
+                                "state": request_data["state"],
+                            }
+                        )
+                        st.success("✅ Plan generated!")
+                    else:
+                        st.error("❌ RL engine not available")
 
     with col_rec:
         st.subheader("⚡ Recommended Session")
@@ -507,33 +490,14 @@ with tab_today:
                             },
                         }
 
-                        try:
-                            reward = None
-                            try:
-                                response = requests.post(
-                                    f"{API_BASE_URL}/feedback",
-                                    json=feedback_data,
-                                    timeout=5,
-                                )
-                                if response.status_code == 200:
-                                    reward = response.json()["reward"]
-                            except Exception:
-                                pass
-
-                            # Local bandit update fallback
-                            if reward is None and _RL_AVAILABLE and "local_bandit" in st.session_state:
-                                r = 1.0 if completed else 0.0
-                                r += (satisfaction - 5) / 10
-                                r = max(0.0, min(1.0, r))
-                                st.session_state.local_bandit.update(action_id, r)
-                                reward = r
-
-                            if reward is not None:
-                                st.success(f"✅ Feedback submitted! Reward: {reward:.2f}")
-                            else:
-                                st.error("❌ Feedback submission failed")
-                        except Exception as e:
-                            st.error(f"❌ Error: {str(e)}")
+                        if _RL_AVAILABLE and "local_bandit" in st.session_state:
+                            r = 1.0 if completed else 0.0
+                            r += (satisfaction - 5) / 10
+                            r = max(0.0, min(1.0, r))
+                            st.session_state.local_bandit.update(action_id, r)
+                            st.success(f"✅ Feedback submitted! Reward: {r:.2f}")
+                        else:
+                            st.warning("⚠️ Feedback noted (RL engine not initialized yet)")
         else:
             st.info(
                 "👈 Input your body state and click 'Get Today's Plan' to receive a personalized recommendation."
