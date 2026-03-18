@@ -32,7 +32,7 @@ echo "🌐 Starting Web Interface..."
 echo ""
 
 # Start Streamlit
-streamlit run web_app_en.py --server.headless true --server.port 8501
+streamlit run web_app_pro.py --server.headless true --server.port 8501
 
 echo ""
 echo "=========================================="

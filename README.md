@@ -2,7 +2,7 @@
 
 > Contextual Bandits + Thompson Sampling · GPT-4 AI Coach · Safety-Constrained RL · FastAPI · Streamlit
 
-[![CI](https://github.com/your-username/RL/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/RL/actions)
+[![CI](https://github.com/zhengbrody/RL/actions/workflows/ci.yml/badge.svg)](https://github.com/zhengbrody/RL/actions)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
