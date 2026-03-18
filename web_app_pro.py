@@ -120,7 +120,12 @@ if dark_mode:
         background-color: #121212;
     }
 
-    p, span, div, h1, h2, h3, h4, h5, h6, label {
+    p, span, div, h1, h2, h3, h4, h5, h6, label,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stText"],
+    [class*="stSlider"] label,
+    [class*="stSlider"] p,
+    [data-testid="stWidgetLabel"] {
         color: #e0e0e0 !important;
     }
 
@@ -290,42 +295,15 @@ with st.sidebar:
 
     st.subheader("📡 System Status")
 
-    # Check API Server
-    try:
-        response = requests.get(f"{API_BASE_URL}/health", timeout=3)
-        if response.status_code == 200:
-            st.markdown(
-                '<span class="status-online">● API Server Active</span>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                '<span class="status-offline">● API Server Error</span>',
-                unsafe_allow_html=True,
-            )
-    except Exception:
-        if _RL_AVAILABLE:
-            st.markdown(
-                '<span class="status-online">● RL Engine (Local Mode)</span>',
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                '<span class="status-offline">● API Server Offline</span>',
-                unsafe_allow_html=True,
-            )
-
-    # AI Coach Status
-    if AI_COACH_ENABLED:
-        st.markdown(
-            '<span class="status-online">● AI Coach Active</span>',
-            unsafe_allow_html=True,
-        )
+    if _RL_AVAILABLE:
+        st.markdown('<span class="status-online">● RL Engine Active</span>', unsafe_allow_html=True)
     else:
-        st.markdown(
-            '<span class="status-offline">● AI Coach Offline</span>',
-            unsafe_allow_html=True,
-        )
+        st.markdown('<span class="status-offline">● RL Engine Unavailable</span>', unsafe_allow_html=True)
+
+    if AI_COACH_ENABLED:
+        st.markdown('<span class="status-online">● AI Coach Active</span>', unsafe_allow_html=True)
+    else:
+        st.markdown('<span class="status-offline">● AI Coach Offline</span>', unsafe_allow_html=True)
 
     st.divider()
 
