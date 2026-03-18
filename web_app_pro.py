@@ -206,48 +206,21 @@ if dark_mode:
         background-color: #2a2a2a;
         border-radius: 8px;
     }
+
+    .status-online { color: #4caf50; font-weight: 600; }
+    .status-offline { color: #f44336; font-weight: 600; }
 </style>
 """,
         unsafe_allow_html=True,
     )
 else:
-    # Light Mode CSS
+    # Light Mode CSS — only style custom components, let Streamlit handle the rest
     st.markdown(
         """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        color: #1a1a1a;
-    }
-
-    .main {
-        background-color: #ffffff;
-    }
-
-    p, span, div, h1, h2, h3, h4, h5, h6, label {
-        color: #1a1a1a !important;
-    }
-
-    .stMetric {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border: 1px solid #e0e0e0;
-    }
-
-    .stMetric label {
-        color: #495057 !important;
-        font-weight: 600;
-    }
-
-    .stMetric [data-testid="stMetricValue"] {
-        color: #1a1a1a !important;
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
+    html, body { font-family: 'Inter', sans-serif; }
 
     .rec-card {
         background: linear-gradient(135deg, #1f77b4 0%, #0d47a1 100%);
@@ -257,23 +230,17 @@ else:
         margin-bottom: 2rem;
         box-shadow: 0 10px 25px rgba(31, 119, 180, 0.3);
     }
-
-    .rec-card h3, .rec-card p, .rec-card strong {
-        color: #ffffff !important;
-    }
+    .rec-card h3, .rec-card p, .rec-card strong { color: #ffffff !important; }
 
     .coach-msg {
-        background-color: #f8f9fa;
+        background-color: #f0f4f8;
+        color: #1a1a1a !important;
         padding: 15px;
         border-radius: 15px 15px 15px 0px;
-        border: 2px solid #dee2e6;
+        border: 1px solid #d0d7de;
         margin-bottom: 10px;
     }
-
-    .coach-msg b, .coach-msg {
-        color: #1a1a1a !important;
-        font-weight: 600;
-    }
+    .coach-msg b { color: #1a1a1a !important; }
 
     .user-msg {
         background-color: #1f77b4;
@@ -282,36 +249,10 @@ else:
         border-radius: 15px 15px 0px 15px;
         margin-bottom: 10px;
         text-align: right;
-        border: 2px solid #1565c0;
     }
 
-    .stButton>button {
-        border-radius: 8px;
-        background-color: #1f77b4;
-        color: white;
-        font-weight: 600;
-        border: none;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #f8f9fa;
-    }
-
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] div {
-        color: #1a1a1a !important;
-    }
-
-    .stTextInput input, .stNumberInput input, .stSelectbox select {
-        color: #1a1a1a !important;
-        background-color: #ffffff !important;
-    }
-
-    .stAlert {
-        border-radius: 8px;
-    }
+    .status-online { color: #28a745; font-weight: 600; }
+    .status-offline { color: #dc3545; font-weight: 600; }
 </style>
 """,
         unsafe_allow_html=True,
@@ -435,15 +376,33 @@ with tab_today:
 
     with col_input:
         st.subheader("📝 Body State Input")
+
+        # Pre-fill from most recent uploaded/manual data
+        _last_state = {}
+        for entry in reversed(st.session_state.recommendation_history):
+            s = entry.get("state", {})
+            if s:
+                _last_state = s
+                break
+        _def_readiness = int(_last_state.get("readiness_score", 75))
+        _def_sleep     = int(_last_state.get("sleep_score", 80))
+        _def_hrv       = int(_last_state.get("hrv", 50))
+        _def_rhr       = int(_last_state.get("resting_hr", 60))
+        _def_fatigue   = int(_last_state.get("fatigue", 5))
+        _def_activity  = int(_last_state.get("activity_score", 70))
+
+        if _last_state:
+            st.caption("✅ Pre-filled from your latest uploaded data")
+
         with st.form("state_update"):
             st.write("Input your current state:")
 
-            readiness_score = st.slider("Readiness Score", 0, 100, 75)
-            sleep_score = st.slider("Sleep Score", 0, 100, 80)
-            hrv = st.slider("HRV (ms)", 20, 100, 50)
-            resting_hr = st.slider("Resting Heart Rate", 40, 100, 60)
-            fatigue = st.slider("Fatigue Level", 1, 10, 5)
-            activity_score = st.slider("Activity Score", 0, 100, 70)
+            readiness_score = st.slider("Readiness Score", 0, 100, _def_readiness)
+            sleep_score = st.slider("Sleep Score", 0, 100, _def_sleep)
+            hrv = st.slider("HRV (ms)", 20, 100, max(20, min(100, _def_hrv)))
+            resting_hr = st.slider("Resting Heart Rate", 40, 100, max(40, min(100, _def_rhr)))
+            fatigue = st.slider("Fatigue Level", 1, 10, max(1, min(10, _def_fatigue)))
+            activity_score = st.slider("Activity Score", 0, 100, _def_activity)
 
             generate_btn = st.form_submit_button(
                 "⚡ Get Today's Plan", use_container_width=True
