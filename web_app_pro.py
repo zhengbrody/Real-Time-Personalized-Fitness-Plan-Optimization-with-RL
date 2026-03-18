@@ -11,9 +11,68 @@ from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
 import os
+import sys
 from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
+
+# --- LOCAL RL ENGINE (fallback when API server is offline) ---
+sys.path.insert(0, str(Path(__file__).parent))
+try:
+    from src.recommendation.action_space import ActionSpace
+    from src.recommendation.contextual_bandits import ContextualBandit
+    _RL_AVAILABLE = True
+except Exception:
+    _RL_AVAILABLE = False
+
+class _SafetyFilter:
+    def filter_actions(self, state, action_space):
+        all_ids = list(range(action_space.get_action_count()))
+        r = state.get("readiness_score", 50)
+        f = state.get("fatigue", 5)
+        if r < 30 or f > 8:
+            return [i for i in all_ids if action_space.get_action(i).workout_type in ("REST", "RECOVERY")]
+        if f > 6:
+            return [i for i in all_ids if action_space.get_action(i).intensity in ("LOW", "NONE")]
+        return all_ids
+
+def _get_local_recommendation(state):
+    """Run Thompson Sampling locally when API server is unavailable."""
+    if not _RL_AVAILABLE:
+        return None
+    if "local_action_space" not in st.session_state:
+        st.session_state.local_action_space = ActionSpace()
+        st.session_state.local_bandit = ContextualBandit(
+            n_actions=st.session_state.local_action_space.get_action_count()
+        )
+        st.session_state.local_safety = _SafetyFilter()
+
+    action_space = st.session_state.local_action_space
+    bandit = st.session_state.local_bandit
+    safety = st.session_state.local_safety
+
+    allowed = safety.filter_actions(state, action_space)
+    action_id = bandit.select_action(allowed)
+    action = action_space.get_action(action_id)
+
+    fatigue = state.get("fatigue", 5)
+    readiness = state.get("readiness_score", 50)
+    if fatigue > 6 or readiness < 40:
+        rationale = "High fatigue detected — conservative session recommended to avoid overtraining."
+    elif readiness > 75:
+        rationale = "Strong readiness metrics — Thompson Sampling selected a challenging session."
+    else:
+        rationale = "Moderate readiness — balanced session selected via Thompson Sampling."
+
+    return {
+        "action_id": action_id,
+        "workout_type": action.workout_type,
+        "intensity": action.intensity,
+        "duration_minutes": action.duration_minutes,
+        "description": action.description,
+        "rationale": rationale,
+        "safety_check": {"is_safe": True, "message": "Passed local safety gate"},
+    }
 
 # --- CONFIGURATION & ASSETS ---
 st.set_page_config(
@@ -292,7 +351,7 @@ with st.sidebar:
 
     # Check API Server
     try:
-        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
+        response = requests.get(f"{API_BASE_URL}/health", timeout=3)
         if response.status_code == 200:
             st.markdown(
                 '<span class="status-online">● API Server Active</span>',
@@ -304,10 +363,16 @@ with st.sidebar:
                 unsafe_allow_html=True,
             )
     except Exception:
-        st.markdown(
-            '<span class="status-offline">● API Server Offline</span>',
-            unsafe_allow_html=True,
-        )
+        if _RL_AVAILABLE:
+            st.markdown(
+                '<span class="status-online">● RL Engine (Local Mode)</span>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<span class="status-offline">● API Server Offline</span>',
+                unsafe_allow_html=True,
+            )
 
     # AI Coach Status
     if AI_COACH_ENABLED:
@@ -400,15 +465,23 @@ with tab_today:
 
                 try:
                     with st.spinner("Generating recommendation..."):
-                        response = requests.post(
-                            f"{API_BASE_URL}/recommend", json=request_data, timeout=10
-                        )
+                        recommendation = None
+                        # Try API server first
+                        try:
+                            response = requests.post(
+                                f"{API_BASE_URL}/recommend", json=request_data, timeout=5
+                            )
+                            if response.status_code == 200:
+                                recommendation = response.json()
+                        except Exception:
+                            pass
 
-                        if response.status_code == 200:
-                            recommendation = response.json()
+                        # Fallback: run Thompson Sampling locally
+                        if recommendation is None:
+                            recommendation = _get_local_recommendation(request_data["state"])
+
+                        if recommendation:
                             st.session_state.current_plan = recommendation
-
-                            # Add to history
                             st.session_state.recommendation_history.append(
                                 {
                                     "timestamp": datetime.now(),
@@ -416,12 +489,11 @@ with tab_today:
                                     "state": request_data["state"],
                                 }
                             )
-
                             st.success("✅ Plan generated!")
                         else:
-                            st.error(f"❌ Error: {response.status_code}")
+                            st.error("❌ Could not generate recommendation")
                 except Exception as e:
-                    st.error(f"❌ Request failed: {str(e)}")
+                    st.error(f"❌ Error: {str(e)}")
 
     with col_rec:
         st.subheader("⚡ Recommended Session")
@@ -477,17 +549,28 @@ with tab_today:
                         }
 
                         try:
-                            response = requests.post(
-                                f"{API_BASE_URL}/feedback",
-                                json=feedback_data,
-                                timeout=10,
-                            )
-
-                            if response.status_code == 200:
-                                result = response.json()
-                                st.success(
-                                    f"✅ Feedback submitted! Reward: {result['reward']:.2f}"
+                            reward = None
+                            try:
+                                response = requests.post(
+                                    f"{API_BASE_URL}/feedback",
+                                    json=feedback_data,
+                                    timeout=5,
                                 )
+                                if response.status_code == 200:
+                                    reward = response.json()["reward"]
+                            except Exception:
+                                pass
+
+                            # Local bandit update fallback
+                            if reward is None and _RL_AVAILABLE and "local_bandit" in st.session_state:
+                                r = 1.0 if completed else 0.0
+                                r += (satisfaction - 5) / 10
+                                r = max(0.0, min(1.0, r))
+                                st.session_state.local_bandit.update(action_id, r)
+                                reward = r
+
+                            if reward is not None:
+                                st.success(f"✅ Feedback submitted! Reward: {reward:.2f}")
                             else:
                                 st.error("❌ Feedback submission failed")
                         except Exception as e:
