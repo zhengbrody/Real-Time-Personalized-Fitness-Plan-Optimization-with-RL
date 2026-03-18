@@ -2,7 +2,7 @@
 # Supports: API server, Web interface, Kafka consumer
 
 # Base stage with common dependencies
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set working directory
 WORKDIR /app
@@ -26,10 +26,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy source code
 COPY src/ ./src/
-COPY data/ ./data/
-COPY models/ ./models/
 
-# Create data directories
+# Create data/model directories (data & models are gitignored; populated at runtime)
 RUN mkdir -p /app/data/raw /app/data/processed /app/data/features /app/models
 
 # Set Python path
@@ -38,7 +36,7 @@ ENV PYTHONPATH=/app
 # ============================================
 # API Server Stage
 # ============================================
-FROM base as api
+FROM base AS api
 
 WORKDIR /app
 
@@ -55,7 +53,7 @@ CMD ["python", "src/serving/api_server.py"]
 # ============================================
 # Web Interface Stage
 # ============================================
-FROM base as web
+FROM base AS web
 
 WORKDIR /app
 
@@ -81,7 +79,7 @@ CMD ["streamlit", "run", "web_app_pro.py", \
 # ============================================
 # Kafka Consumer Stage
 # ============================================
-FROM base as consumer
+FROM base AS consumer
 
 WORKDIR /app
 
@@ -93,7 +91,7 @@ CMD ["python", "src/online_learning/kafka_consumer.py"]
 # ============================================
 # Development Stage (with dev dependencies)
 # ============================================
-FROM base as development
+FROM base AS development
 
 WORKDIR /app
 
@@ -127,7 +125,7 @@ CMD ["/bin/bash"]
 # ============================================
 # Production Stage (optimized, minimal)
 # ============================================
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 WORKDIR /app
 
@@ -146,7 +144,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy only necessary files
 COPY src/ ./src/
-COPY models/ ./models/
+
+# Create models directory (models/ is gitignored; populated at runtime or via volume)
+RUN mkdir -p /app/models
 
 # Create non-root user
 RUN useradd --no-create-home --uid 1000 profit && \
