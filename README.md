@@ -349,6 +349,6 @@ MIT — see [LICENSE](LICENSE). Not a medical device. See license for full discl
 
 ## Contact
 
-**Author**: [Your Name] · [LinkedIn] · [Email]
+**Author**: zheng dong · [LinkedIn：https://www.linkedin.com/in/zhengdong17/] · [Email：zhengdong0317@gmail.com]
 
 ⭐ Star if useful · Issues welcome · PRs open
