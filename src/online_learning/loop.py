@@ -4,9 +4,12 @@ Online Learning Loop
 Closed-loop: state → action → feedback → update
 """
 
+import logging
 import pandas as pd
 from typing import Dict, Optional
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from src.recommendation.hybrid_recommender import HybridRecommender
 from src.recommendation.reward_fn import RewardFunction
@@ -110,7 +113,7 @@ class OnlineLearningLoop:
                 )
                 self.kafka_producer.send(topic, value=json.dumps(event))
             except Exception as e:
-                print(f"Error logging to Kafka: {e}")
+                logger.error(f"Error logging to Kafka: {e}")
 
     def get_event_log(self) -> pd.DataFrame:
         """Get event log as DataFrame."""

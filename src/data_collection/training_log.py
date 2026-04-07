@@ -4,11 +4,14 @@ Training Log Data Collection Module
 This module provides functions to log and manage training session data.
 """
 
+import logging
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Optional
 import os
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class TrainingLogger:
@@ -132,7 +135,7 @@ class TrainingLogger:
         df_combined = pd.concat([df_existing, df_new], ignore_index=True)
         df_combined.to_csv(self.log_file, index=False)
 
-        print(f"Logged {len(exercises)} exercises for session on {date}")
+        logger.info(f"Logged {len(exercises)} exercises for session on {date}")
 
     def get_recent_sessions(self, days: int = 7) -> pd.DataFrame:
         """
@@ -194,8 +197,8 @@ def create_training_template():
     """
     logger = TrainingLogger()
 
-    print("Training Session Logger")
-    print("=" * 50)
+    logger.info("Training Session Logger")
+    logger.info("=" * 50)
 
     # Get session-level info
     workout_type = input("Workout type (Push/Pull/Legs/Cardio): ").strip()
@@ -205,7 +208,7 @@ def create_training_template():
     duration = int(input("Total duration (minutes): "))
 
     exercises = []
-    print("\nEnter exercises (press Enter with empty exercise name to finish):")
+    logger.info("\nEnter exercises (press Enter with empty exercise name to finish):")
 
     while True:
         ex_name = input("Exercise name: ").strip()
@@ -241,7 +244,7 @@ def create_training_template():
         notes=notes,
     )
 
-    print("\nSession logged successfully!")
+    logger.info("\nSession logged successfully!")
 
 
 if __name__ == "__main__":
@@ -267,5 +270,5 @@ if __name__ == "__main__":
 
     # Get summary
     summary = logger.get_session_summary(days=7)
-    print("\nRecent Session Summary:")
-    print(json.dumps(summary, indent=2))
+    logger.info("\nRecent Session Summary:")
+    logger.info(json.dumps(summary, indent=2))

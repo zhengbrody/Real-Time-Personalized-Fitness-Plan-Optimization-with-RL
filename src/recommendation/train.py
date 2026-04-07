@@ -4,10 +4,13 @@ Train Contextual Bandits Model
 Offline training on historical data.
 """
 
+import logging
 import pandas as pd
 import numpy as np
 from pathlib import Path
 import sys
+
+logger = logging.getLogger(__name__)
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -26,28 +29,28 @@ def train_model(
         features_path: Path to feature DataFrame
         output_path: Path to save trained model
     """
-    print("=" * 70)
-    print("TRAINING CONTEXTUAL BANDIT MODEL")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("TRAINING CONTEXTUAL BANDIT MODEL")
+    logger.info("=" * 70)
 
     # Load features
     if not Path(features_path).exists():
-        print(f"✗ Features not found: {features_path}")
-        print("Run feature engineering first:")
-        print("  python src/feature_store/feature_engineering.py")
+        logger.error(f"✗ Features not found: {features_path}")
+        logger.info("Run feature engineering first:")
+        logger.info("  python src/feature_store/feature_engineering.py")
         return
 
     features_df = pd.read_parquet(features_path)
-    print(f"✓ Loaded features: {len(features_df)} records")
+    logger.info(f"✓ Loaded features: {len(features_df)} records")
 
     # Initialize recommender
     recommender = HybridRecommender(use_rl=True)
     action_space = ActionSpace()
 
     # Simulate training (in production, use real feedback)
-    print("\n" + "=" * 70)
-    print("SIMULATED TRAINING")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("SIMULATED TRAINING")
+    logger.info("=" * 70)
 
     # For MVP: simulate based on rules
     # In production, use actual user feedback
@@ -73,7 +76,7 @@ def train_model(
 
         if (idx + 1) % 20 == 0:
             stats = recommender.bandit.get_statistics()
-            print(
+            logger.info(
                 f"  Episode {idx + 1}/{training_episodes}: "
                 f"Total actions: {sum(stats['action_counts'])}"
             )
@@ -85,20 +88,20 @@ def train_model(
     with open(output_path, "wb") as f:
         pickle.dump(recommender, f)
 
-    print(f"\n✓ Model saved to {output_path}")
+    logger.info(f"\n✓ Model saved to {output_path}")
 
     # Evaluation
-    print("\n" + "=" * 70)
-    print("MODEL STATISTICS")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("MODEL STATISTICS")
+    logger.info("=" * 70)
 
     stats = recommender.bandit.get_statistics()
-    print("\nAction counts:")
+    logger.info("\nAction counts:")
     for action_id, count in enumerate(stats["action_counts"][:10]):
         if count > 0:
             action = action_space.get_action(action_id)
             expected = stats["expected_rewards"][action_id]
-            print(
+            logger.info(
                 f"  {action.description}: {count} times, expected reward: {expected:.3f}"
             )
 

@@ -38,7 +38,7 @@ class TestActionSpace:
     def test_default_actions_exist(self):
         space = ActionSpace()
         actions = space.get_all_actions()
-        assert len(actions) > 0
+        assert len(actions) == 18
 
     def test_get_action_by_index(self):
         space = ActionSpace()

@@ -7,7 +7,7 @@ data quality and prevent errors from malformed or missing data.
 
 from typing import Optional, Dict, Any, Literal
 from datetime import datetime
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from enum import Enum
 
 # ============================================
@@ -108,8 +108,9 @@ class BodyState(BaseModel):
         default=None, ge=80, le=100, description="Blood oxygen saturation percentage"
     )
 
-    @validator("resting_hr")
-    def validate_resting_hr(cls, v, values):
+    @field_validator("resting_hr")
+    @classmethod
+    def validate_resting_hr(cls, v: int) -> int:
         """Validate resting heart rate is reasonable."""
         if v < 40:
             raise ValueError("Resting HR below 40 is unusual. Please verify.")
@@ -119,8 +120,9 @@ class BodyState(BaseModel):
             )
         return v
 
-    @validator("hrv")
-    def validate_hrv(cls, v):
+    @field_validator("hrv")
+    @classmethod
+    def validate_hrv(cls, v: int) -> int:
         """Validate HRV is in reasonable range."""
         if v < 10:
             raise ValueError("HRV below 10ms is very low. Please verify data.")
@@ -128,11 +130,11 @@ class BodyState(BaseModel):
             raise ValueError("HRV above 150ms is unusually high. Please verify.")
         return v
 
-    @root_validator(skip_on_failure=True)
-    def validate_readiness_vs_fatigue(cls, values):
+    @model_validator(mode="after")
+    def validate_readiness_vs_fatigue(self) -> "BodyState":
         """Check consistency between readiness and fatigue."""
-        readiness = values.get("readiness_score")
-        fatigue = values.get("fatigue")
+        readiness = self.readiness_score
+        fatigue = self.fatigue
 
         if readiness is not None and fatigue is not None:
             # High readiness (>80) with high fatigue (>7) is inconsistent
@@ -148,11 +150,11 @@ class BodyState(BaseModel):
                     "Please verify inputs."
                 )
 
-        return values
+        return self
 
-    class Config:
-        use_enum_values = True
-        schema_extra = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "readiness_score": 85,
                 "sleep_score": 82,
@@ -164,7 +166,8 @@ class BodyState(BaseModel):
                 "mood": 7,
                 "stress": 3,
             }
-        }
+        },
+    )
 
 
 # ============================================
@@ -187,9 +190,9 @@ class WorkoutRecommendation(BaseModel):
         default=None, ge=0.0, le=1.0, description="Model confidence score (0.0-1.0)"
     )
 
-    class Config:
-        use_enum_values = True
-        schema_extra = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "workout_type": "Upper Body Strength",
                 "intensity": "moderate",
@@ -197,7 +200,8 @@ class WorkoutRecommendation(BaseModel):
                 "explanation": "Your readiness is high and HRV is good. Good day for strength training.",
                 "confidence": 0.87,
             }
-        }
+        },
+    )
 
 
 # ============================================
@@ -232,8 +236,7 @@ class TrainingEntry(BaseModel):
         default=None, description="User approval (True) or disapproval (False)"
     )
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 # ============================================
@@ -255,8 +258,9 @@ class UserProfile(BaseModel):
         Field(default="beginner", description="Training experience level")
     )
 
-    @validator("age")
-    def validate_age(cls, v):
+    @field_validator("age")
+    @classmethod
+    def validate_age(cls, v: int) -> int:
         """Ensure user is adult."""
         if v < 18:
             raise ValueError("User must be 18 or older to use this system.")
@@ -268,9 +272,9 @@ class UserProfile(BaseModel):
         height_m = self.height / 100
         return round(self.weight / (height_m**2), 2)
 
-    class Config:
-        use_enum_values = True
-        schema_extra = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "user_id": "user_001",
                 "age": 30,
@@ -279,7 +283,8 @@ class UserProfile(BaseModel):
                 "fitness_goal": "strength",
                 "training_experience": "intermediate",
             }
-        }
+        },
+    )
 
 
 # ============================================
@@ -296,8 +301,7 @@ class RecommendationRequest(BaseModel):
         default=FitnessGoal.GENERAL_FITNESS, description="Fitness goal override"
     )
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class RecommendationResponse(BaseModel):
@@ -308,8 +312,7 @@ class RecommendationResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
     request_id: Optional[str] = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class FeedbackRequest(BaseModel):
@@ -324,8 +327,7 @@ class FeedbackRequest(BaseModel):
     actual_workout: Optional[WorkoutType] = None
     actual_duration: Optional[int] = Field(default=None, ge=0, le=300)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class HealthCheckResponse(BaseModel):

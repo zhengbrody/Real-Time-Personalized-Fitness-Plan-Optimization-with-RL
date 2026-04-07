@@ -4,10 +4,13 @@ Apple Health Data Collection Module
 This module provides functions to parse and process Apple Health export data.
 """
 
+import logging
 import defusedxml.ElementTree as ET
 import pandas as pd
 from typing import Dict
 import os
+
+logger = logging.getLogger(__name__)
 
 
 class AppleHealthParser:
@@ -205,7 +208,7 @@ class AppleHealthParser:
             if not df.empty:
                 file_path = os.path.join(output_dir, f"apple_health_{data_type}.csv")
                 df.to_csv(file_path, index=False)
-                print(f"Saved {data_type} data to {file_path}")
+                logger.info(f"Saved {data_type} data to {file_path}")
 
 
 if __name__ == "__main__":
@@ -220,6 +223,6 @@ if __name__ == "__main__":
     # Save to CSV
     parser.save_to_csv("data/raw/apple_watch_health")
 
-    print("Apple Health data parsing complete!")
+    logger.info("Apple Health data parsing complete!")
     for data_type, df in data.items():
-        print(f"{data_type}: {len(df)} records")
+        logger.info(f"{data_type}: {len(df)} records")

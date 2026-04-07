@@ -1,0 +1,442 @@
+{
+  "config": {
+    "num_seeds": 10,
+    "episodes_per_seed": 1000,
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ]
+  },
+  "per_seed": {
+    "seed_1": {
+      "random": {
+        "mean_reward": 0.6046930586630799,
+        "std_reward": 0.22215241121346452,
+        "cumulative_reward": 604.6930586630799,
+        "optimal_action_rate": 0.088,
+        "overtraining_rate": 0.007,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.604756307058372,
+        "std_reward": 0.21952389671751504,
+        "cumulative_reward": 604.756307058372,
+        "optimal_action_rate": 0.052,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.6393344939874103,
+        "std_reward": 0.19538618407939518,
+        "cumulative_reward": 639.3344939874103,
+        "optimal_action_rate": 0.103,
+        "overtraining_rate": 0.001,
+        "convergence_episode": 83
+      }
+    },
+    "seed_10": {
+      "random": {
+        "mean_reward": 0.6083529084596621,
+        "std_reward": 0.22370653465859097,
+        "cumulative_reward": 608.3529084596621,
+        "optimal_action_rate": 0.101,
+        "overtraining_rate": 0.01,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6144192168697239,
+        "std_reward": 0.21841873140285123,
+        "cumulative_reward": 614.4192168697239,
+        "optimal_action_rate": 0.044,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 71
+      },
+      "thompson": {
+        "mean_reward": 0.635552939368536,
+        "std_reward": 0.2155954140061443,
+        "cumulative_reward": 635.5529393685359,
+        "optimal_action_rate": 0.194,
+        "overtraining_rate": 0.009,
+        "convergence_episode": 51
+      }
+    },
+    "seed_2": {
+      "random": {
+        "mean_reward": 0.6175265353276922,
+        "std_reward": 0.21799215022887966,
+        "cumulative_reward": 617.5265353276922,
+        "optimal_action_rate": 0.088,
+        "overtraining_rate": 0.004,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6234594816064617,
+        "std_reward": 0.22355277368039247,
+        "cumulative_reward": 623.4594816064617,
+        "optimal_action_rate": 0.051,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.6364272709035614,
+        "std_reward": 0.20419632834166415,
+        "cumulative_reward": 636.4272709035614,
+        "optimal_action_rate": 0.093,
+        "overtraining_rate": 0.004,
+        "convergence_episode": 55
+      }
+    },
+    "seed_3": {
+      "random": {
+        "mean_reward": 0.6120140271248911,
+        "std_reward": 0.21897029555729156,
+        "cumulative_reward": 612.0140271248911,
+        "optimal_action_rate": 0.098,
+        "overtraining_rate": 0.004,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6223595577671563,
+        "std_reward": 0.21812992775652484,
+        "cumulative_reward": 622.3595577671564,
+        "optimal_action_rate": 0.037,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 62
+      },
+      "thompson": {
+        "mean_reward": 0.6448847632177291,
+        "std_reward": 0.20009929369437265,
+        "cumulative_reward": 644.8847632177292,
+        "optimal_action_rate": 0.11,
+        "overtraining_rate": 0.003,
+        "convergence_episode": 85
+      }
+    },
+    "seed_4": {
+      "random": {
+        "mean_reward": 0.5888741633576536,
+        "std_reward": 0.23942635540078658,
+        "cumulative_reward": 588.8741633576536,
+        "optimal_action_rate": 0.079,
+        "overtraining_rate": 0.011,
+        "convergence_episode": 63
+      },
+      "rule_based": {
+        "mean_reward": 0.6087636794038837,
+        "std_reward": 0.23230336038951496,
+        "cumulative_reward": 608.7636794038837,
+        "optimal_action_rate": 0.042,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.6161719824613054,
+        "std_reward": 0.21295631229591946,
+        "cumulative_reward": 616.1719824613054,
+        "optimal_action_rate": 0.116,
+        "overtraining_rate": 0.006,
+        "convergence_episode": 53
+      }
+    },
+    "seed_5": {
+      "random": {
+        "mean_reward": 0.5913419530849713,
+        "std_reward": 0.2349310544314361,
+        "cumulative_reward": 591.3419530849712,
+        "optimal_action_rate": 0.089,
+        "overtraining_rate": 0.009,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6051938960004559,
+        "std_reward": 0.23427440581682382,
+        "cumulative_reward": 605.1938960004559,
+        "optimal_action_rate": 0.029,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.6177987940094538,
+        "std_reward": 0.20214015447023354,
+        "cumulative_reward": 617.7987940094538,
+        "optimal_action_rate": 0.156,
+        "overtraining_rate": 0.003,
+        "convergence_episode": 51
+      }
+    },
+    "seed_6": {
+      "random": {
+        "mean_reward": 0.5919565844790435,
+        "std_reward": 0.23331266141048326,
+        "cumulative_reward": 591.9565844790435,
+        "optimal_action_rate": 0.074,
+        "overtraining_rate": 0.009,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6116013272944726,
+        "std_reward": 0.2203085295845286,
+        "cumulative_reward": 611.6013272944726,
+        "optimal_action_rate": 0.045,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.633973380148083,
+        "std_reward": 0.20318127030909106,
+        "cumulative_reward": 633.973380148083,
+        "optimal_action_rate": 0.1,
+        "overtraining_rate": 0.003,
+        "convergence_episode": 51
+      }
+    },
+    "seed_7": {
+      "random": {
+        "mean_reward": 0.5884262589018608,
+        "std_reward": 0.23279638180826873,
+        "cumulative_reward": 588.4262589018608,
+        "optimal_action_rate": 0.072,
+        "overtraining_rate": 0.011,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6127769960248778,
+        "std_reward": 0.22183139671126137,
+        "cumulative_reward": 612.7769960248778,
+        "optimal_action_rate": 0.049,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.6267955726038141,
+        "std_reward": 0.20485404108805702,
+        "cumulative_reward": 626.7955726038141,
+        "optimal_action_rate": 0.033,
+        "overtraining_rate": 0.005,
+        "convergence_episode": 51
+      }
+    },
+    "seed_8": {
+      "random": {
+        "mean_reward": 0.5849484508432791,
+        "std_reward": 0.21758998497149354,
+        "cumulative_reward": 584.948450843279,
+        "optimal_action_rate": 0.091,
+        "overtraining_rate": 0.006,
+        "convergence_episode": 53
+      },
+      "rule_based": {
+        "mean_reward": 0.6043286178632593,
+        "std_reward": 0.22283912566541153,
+        "cumulative_reward": 604.3286178632593,
+        "optimal_action_rate": 0.044,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 51
+      },
+      "thompson": {
+        "mean_reward": 0.621538953580403,
+        "std_reward": 0.19787265902432027,
+        "cumulative_reward": 621.538953580403,
+        "optimal_action_rate": 0.112,
+        "overtraining_rate": 0.004,
+        "convergence_episode": 61
+      }
+    },
+    "seed_9": {
+      "random": {
+        "mean_reward": 0.6020732782878516,
+        "std_reward": 0.21741786835631177,
+        "cumulative_reward": 602.0732782878516,
+        "optimal_action_rate": 0.093,
+        "overtraining_rate": 0.007,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.6068731486285228,
+        "std_reward": 0.216845790362099,
+        "cumulative_reward": 606.8731486285228,
+        "optimal_action_rate": 0.035,
+        "overtraining_rate": 0.0,
+        "convergence_episode": 65
+      },
+      "thompson": {
+        "mean_reward": 0.628491632745475,
+        "std_reward": 0.1968470904958491,
+        "cumulative_reward": 628.491632745475,
+        "optimal_action_rate": 0.052,
+        "overtraining_rate": 0.003,
+        "convergence_episode": 129
+      }
+    }
+  },
+  "aggregated": {
+    "random": {
+      "mean_reward": {
+        "mean": 0.599021,
+        "std": 0.011363,
+        "ci_95": [
+          0.591978,
+          0.606063
+        ]
+      },
+      "std_reward": {
+        "mean": 0.22583,
+        "std": 0.008416,
+        "ci_95": [
+          0.220614,
+          0.231046
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 599.020722,
+        "std": 11.362531,
+        "ci_95": [
+          591.978152,
+          606.063291
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.0873,
+        "std": 0.009615,
+        "ci_95": [
+          0.08134,
+          0.09326
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.0078,
+        "std": 0.002616,
+        "ci_95": [
+          0.006178,
+          0.009422
+        ]
+      },
+      "convergence_episode": {
+        "mean": 52.4,
+        "std": 3.777124,
+        "ci_95": [
+          50.058914,
+          54.741086
+        ]
+      }
+    },
+    "rule_based": {
+      "mean_reward": {
+        "mean": 0.611453,
+        "std": 0.006966,
+        "ci_95": [
+          0.607136,
+          0.615771
+        ]
+      },
+      "std_reward": {
+        "mean": 0.222803,
+        "std": 0.005934,
+        "ci_95": [
+          0.219125,
+          0.226481
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 611.453223,
+        "std": 6.965537,
+        "ci_95": [
+          607.135938,
+          615.770508
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.0428,
+        "std": 0.00733,
+        "ci_95": [
+          0.038257,
+          0.047343
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "ci_95": [
+          0.0,
+          0.0
+        ]
+      },
+      "convergence_episode": {
+        "mean": 55.5,
+        "std": 7.560864,
+        "ci_95": [
+          50.813728,
+          60.186272
+        ]
+      }
+    },
+    "thompson": {
+      "mean_reward": {
+        "mean": 0.630097,
+        "std": 0.00955,
+        "ci_95": [
+          0.624178,
+          0.636016
+        ]
+      },
+      "std_reward": {
+        "mean": 0.203313,
+        "std": 0.006608,
+        "ci_95": [
+          0.199217,
+          0.207408
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 630.096978,
+        "std": 9.549543,
+        "ci_95": [
+          624.17811,
+          636.015846
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.1069,
+        "std": 0.045761,
+        "ci_95": [
+          0.078537,
+          0.135263
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.0041,
+        "std": 0.002183,
+        "ci_95": [
+          0.002747,
+          0.005453
+        ]
+      },
+      "convergence_episode": {
+        "mean": 67.0,
+        "std": 25.438379,
+        "ci_95": [
+          51.23313,
+          82.76687
+        ]
+      }
+    }
+  },
+  "summary": {
+    "ts_vs_random_pct": {
+      "mean": 5.2,
+      "std": 1.22
+    },
+    "ts_vs_rule_pct": {
+      "mean": 3.05,
+      "std": 1.25
+    }
+  }
+}

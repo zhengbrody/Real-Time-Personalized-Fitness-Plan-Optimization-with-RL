@@ -111,14 +111,14 @@ class SafetyGate:
             # Get max intensity and allowed types from safety result
             if safety_result.recommended_action == "mandatory_rest_day":
                 # Only allow REST
-                from .action_space import ActionSpace
+                from src.recommendation.action_space import ActionSpace
 
                 action_space = ActionSpace()
                 return [0]  # REST action ID
 
             elif safety_result.recommended_action == "rest_day_or_light_activity":
                 # Allow REST and RECOVERY only
-                from .action_space import ActionSpace
+                from src.recommendation.action_space import ActionSpace
 
                 action_space = ActionSpace()
                 return action_space.filter_by_safety(
@@ -127,7 +127,7 @@ class SafetyGate:
 
             elif safety_result.recommended_action == "reduce_intensity":
                 # Reduce max intensity
-                from .action_space import ActionSpace
+                from src.recommendation.action_space import ActionSpace
 
                 action_space = ActionSpace()
                 return action_space.filter_by_safety(

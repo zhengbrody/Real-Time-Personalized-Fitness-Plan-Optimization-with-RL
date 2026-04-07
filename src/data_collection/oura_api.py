@@ -4,12 +4,15 @@ Oura Ring API Data Collection Module
 This module provides functions to extract data from Oura Ring via Oura API v2.
 """
 
+import logging
 from python_oura import OuraClientPersonalV2
 import pandas as pd
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 import os
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -49,7 +52,7 @@ class OuraDataCollector:
                 start_date=start_date, end_date=end_date
             )
         except Exception as e:
-            print(f"Error fetching sleep data: {e}")
+            logger.error(f"Error fetching sleep data: {e}")
             return pd.DataFrame()
 
         records = []
@@ -88,7 +91,7 @@ class OuraDataCollector:
                 start_date=start_date, end_date=end_date
             )
         except Exception as e:
-            print(f"Error fetching activity data: {e}")
+            logger.error(f"Error fetching activity data: {e}")
             return pd.DataFrame()
 
         records = []
@@ -125,7 +128,7 @@ class OuraDataCollector:
                 start_date=start_date, end_date=end_date
             )
         except Exception as e:
-            print(f"Error fetching readiness data: {e}")
+            logger.error(f"Error fetching readiness data: {e}")
             return pd.DataFrame()
 
         records = []
@@ -157,7 +160,7 @@ class OuraDataCollector:
         try:
             hr_data = self.client.heart_rate(start_date=start_date, end_date=end_date)
         except Exception as e:
-            print(f"Error fetching heart rate data: {e}")
+            logger.error(f"Error fetching heart rate data: {e}")
             return pd.DataFrame()
 
         records = []
@@ -214,7 +217,7 @@ class OuraDataCollector:
                 if not df.empty:
                     file_path = os.path.join(save_path, f"oura_{data_type}.csv")
                     df.to_csv(file_path, index=False)
-                    print(f"Saved {data_type} data to {file_path}")
+                    logger.info(f"Saved {data_type} data to {file_path}")
 
         return data
 
@@ -226,6 +229,6 @@ if __name__ == "__main__":
     # Sync last 30 days
     data = collector.sync_recent_data(days=30, save_path="data/raw/oura")
 
-    print("Data collection complete!")
+    logger.info("Data collection complete!")
     for data_type, df in data.items():
-        print(f"{data_type}: {len(df)} records")
+        logger.info(f"{data_type}: {len(df)} records")

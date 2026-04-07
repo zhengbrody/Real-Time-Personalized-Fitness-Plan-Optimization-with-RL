@@ -10,18 +10,31 @@
 
 ## Results
 
-> All metrics are from a **reproducible simulation** (N=1,000 episodes, seed=42, synthetic body-state data).
-> Run yourself: `python scripts/benchmark.py --episodes 1000 --seed 42`
+> Metrics from **10 independent seeds** (N=1,000 episodes each, seeds 1–10, synthetic body-state data). Values are mean ± std across seeds.
+> Reproduce: `python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 1000`
+> Single seed: `python scripts/benchmark.py --episodes 1000 --seed 42`
 
 | Metric | Random Baseline | Rule-based | **Thompson Sampling** |
 |--------|---------------:|----------:|----------------------:|
-| Mean Reward | 0.601 | 0.618 | **0.643** |
-| Std Reward | 0.229 | 0.218 | **0.200** |
-| Optimal Action Rate | 8.9% | 5.4% | **18.0%** |
-| Overtraining Rate | 0.6% | 0.0% | 0.7% |
-| Late Mean Reward (ep 500–999) | 0.603 | 0.620 | **0.658** |
+| Mean Reward | 0.599 ± 0.011 | 0.611 ± 0.007 | **0.630 ± 0.010** |
+| Improvement vs Random | — | — | **+5.2% ± 1.2%** |
+| Improvement vs Rules | — | — | **+3.0% ± 1.2%** |
+| Convergence Episode | — | — | **ep 67 ± 25** |
 
-**+7.0%** cumulative reward over random · **+4.1%** over hand-crafted rules · converges at **~ep 84** · p99 API latency **<50ms**
+**+5.2%** reward over random · **+3.0%** over hand-crafted rules · converges at **~ep 67** · results reproducible across 10 seeds · p99 API latency **<50ms**
+
+<details>
+<summary>Learning curves (click to expand)</summary>
+
+![Learning Curves](docs/learning_curves.png)
+
+*Mean rolling reward (window=50) across 10 seeds. Shaded region = ±1 std. Dashed line = convergence point.*
+
+![Convergence Analysis](docs/convergence_detail.png)
+
+*Three-method convergence analysis: rolling mean threshold (ep 65), change-point detection (ep 50), plateau detection (ep 100). Mean estimate: ep 72 ± 21.*
+
+</details>
 
 ---
 
@@ -65,10 +78,11 @@ Generic training programs ignore daily physiological variation. A plan suitable 
 │  Recommendation Engine│          │     AI Coach Agent        │
 │                       │          │                           │
 │  1. Safety Gate       │          │  GPT-4 · Tool Calling     │
-│     (hard rules)      │          │  Health data context      │
-│  2. Feature extract   │          │  Conversational interface │
-│  3. Thompson Sampling │          │                           │
-│  4. Action selection  │          └───────────────────────────┘
+│     (hard rules)      │          │  Cross-session memory     │
+│  2. Feature extract   │          │  (coach_memory.json)      │
+│  3. Thompson Sampling │          │  Context-aware safety     │
+│  4. Action selection  │          │  Session handoff          │
+│                       │          └───────────────────────────┘
 └────────┬──────────────┘
          │
 ┌────────▼──────────────────────────────────────────────────────┐
@@ -158,14 +172,18 @@ reward = 1.0 × completion
 
 Closed loop: state → recommendation → user feedback → Kafka event → Beta parameter update. Kafka is optional — system falls back gracefully to local event log.
 
-### 6. GPT-4 AI Coach
+### 6. GPT-4 AI Coach with Agent Harness
 
-`src/agent/coach_agent.py`
+`src/agent/coach_agent.py` · `src/agent/memory.py` · `src/agent/session_handoff.py`
 
-Three-layer architecture:
-1. **Safety Gate** — blocks unsafe queries
-2. **Recommendation Engine** — provides structured plan
-3. **LLM Agent** — translates plan into natural language, handles Q&A
+Four-layer architecture with cross-session memory:
+1. **Memory Load** — reads persistent `coach_memory.json` (training history, injuries, preferences, cumulative stats)
+2. **Safety Gate** — blocks unsafe queries; active injuries from memory auto-injected into safety context
+3. **Recommendation Engine** — provides structured plan with user history context
+4. **LLM Agent** — translates plan into natural language, handles Q&A
+5. **Session Handoff** — summarizes session key points, updates memory, persists to disk
+
+The agent harness enables context-aware coaching: if a user reported a knee injury in a prior session, all subsequent sessions automatically filter high-impact actions without the user needing to re-state it.
 
 Tool calls available: `adjust_plan()`, `explain_plan()`, `mood_checkin()`, `set_micro_goal()`, `log_event()`.
 
@@ -176,8 +194,8 @@ Tool calls available: `adjust_plan()`, `explain_plan()`, `mood_checkin()`, `set_
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | RL Algorithm | Thompson Sampling (Beta-Bernoulli) | Workout recommendation |
-| ML Framework | PyTorch | Model training |
-| Feature Store | Feast | Feature management |
+| ML Framework | NumPy + SciPy | Bayesian inference & Thompson Sampling |
+| Feature Store | Custom (Pandas) | Feature engineering pipeline |
 | Streaming | Apache Kafka | Online learning pipeline |
 | API | FastAPI + Pydantic | Model serving (<50ms p99) |
 | AI Coach | OpenAI GPT-4 | Conversational coaching |
@@ -195,7 +213,7 @@ Tool calls available: `adjust_plan()`, `explain_plan()`, `mood_checkin()`, `set_
 ### Option A — Docker (all services, one command)
 
 ```bash
-git clone https://github.com/your-username/RL.git && cd RL
+git clone https://github.com/zhengbrody/RL.git && cd RL
 
 # Configure
 cp .env.example .env
@@ -235,8 +253,15 @@ python scripts/benchmark.py --episodes 1000 --seed 42
 ```
 RL/
 ├── scripts/
-│   ├── benchmark.py                 # ← Reproduce all reported metrics here
-│   └── benchmark_results.json       # Last run results
+│   ├── benchmark.py                 # Single-seed benchmark
+│   ├── benchmark_multi_seed.py      # Multi-seed aggregation (10 seeds)
+│   ├── convergence_analysis.py      # 3-method convergence detection
+│   ├── benchmark_results.json       # Single-seed results
+│   └── benchmark_multi_seed_results.json  # Aggregated results
+├── docs/
+│   ├── learning_curves.png          # Mean ± std across seeds
+│   ├── convergence_analysis.png     # Per-seed convergence scatter
+│   └── convergence_detail.png       # 3-panel convergence diagnostic
 ├── src/
 │   ├── recommendation/
 │   │   ├── contextual_bandits.py    # Thompson Sampling (Beta + Linear)
@@ -250,12 +275,14 @@ RL/
 │   ├── serving/
 │   │   └── api_server.py            # FastAPI endpoints
 │   ├── agent/
-│   │   ├── coach_agent.py           # GPT-4 coach (3-layer)
+│   │   ├── coach_agent.py           # GPT-4 coach with agent harness
+│   │   ├── memory.py                # Cross-session memory persistence
+│   │   ├── session_handoff.py       # End-of-session summarization
 │   │   ├── safety.py                # LLM safety guardrails
 │   │   └── tools.py                 # Agent tool definitions
 │   ├── online_learning/
 │   │   ├── loop.py                  # Feedback → model update
-│   │   └── kafka_consumer.py        # Streaming pipeline
+│   │   └── kafka_consumer.py        # Kafka streaming consumer
 │   ├── data_collection/
 │   │   ├── apple_health.py
 │   │   ├── oura_api.py
@@ -264,6 +291,17 @@ RL/
 │   │   └── experiment_framework.py
 │   └── validation/
 │       └── schemas.py               # Pydantic data schemas
+├── tests/
+│   ├── test_contextual_bandits.py   # Thompson Sampling tests
+│   ├── test_safety_gate.py          # Safety constraint tests
+│   ├── test_reward_fn.py            # Reward function tests
+│   ├── test_action_space.py         # Action space tests
+│   ├── test_hybrid_recommender.py   # Hybrid recommender tests
+│   ├── test_feature_engineering.py  # Feature pipeline tests
+│   ├── test_validation.py           # Schema validation tests
+│   ├── test_api_server.py           # FastAPI endpoint tests
+│   ├── test_coach_memory.py         # Agent memory + handoff tests
+│   └── test_convergence_analysis.py # Convergence detection tests
 ├── web_app_pro.py                   # Streamlit UI (main)
 ├── Dockerfile                       # Multi-stage build
 ├── docker-compose.yml               # Full stack deployment
@@ -297,14 +335,21 @@ Dark/Light mode toggle. No iOS developer account needed — manual data entry co
 - Safety-constrained action selection (hard rules before RL)
 - Multi-component reward design
 - Online learning with incremental model updates
-- Reproducible simulation benchmarking
+- Reproducible simulation benchmarking (10-seed robustness check with confidence intervals)
+- Multi-method convergence analysis (rolling threshold, change-point detection, plateau detection)
+
+### AI Engineering
+- Agent harness with cross-session memory persistence (JSON-backed structured memory)
+- Context-aware safety filtering (injury history auto-injected from memory into safety gate)
+- Session handoff — automatic summarization and state carry-over between conversations
 
 ### Software Engineering
-- Production API design (FastAPI, Pydantic validation)
+- Production API design (FastAPI, Pydantic v2 validation)
 - Event-driven architecture (Kafka streaming)
-- Feature store pattern (Feast)
+- Feature store pattern (custom Pandas pipeline)
 - Containerisation with multi-stage Docker builds
 - CI/CD pipeline (GitHub Actions: lint, test, security scan)
+- 128 unit tests, core RL pipeline at 96–100% coverage
 
 ---
 
@@ -313,26 +358,37 @@ Dark/Light mode toggle. No iOS developer account needed — manual data entry co
 | Claim | Reality |
 |-------|---------|
 | Benchmark metrics | Simulated environment, not real users |
-| Kafka / Feast | Integrated in architecture; Kafka has local fallback |
+| Kafka / Feast | Kafka integrated with local fallback; Feast replaced by custom Pandas pipeline |
 | iOS integration | Data collection code written; no deployed app |
-| `tests/` directory | Currently empty — unit tests are a known gap |
+| `tests/` directory | 10 test modules, 128 tests. Core RL modules (bandits, safety, reward, recommender) at 96–100% line coverage. API endpoints at 80%. |
 
 ---
 
 ## Reproducing Results
 
 ```bash
-# Exact command used to generate numbers in this README
+# Multi-seed (generates numbers in this README)
+python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 1000
+# → scripts/benchmark_multi_seed_results.json
+# → docs/learning_curves.png
+# → docs/convergence_analysis.png
+
+# Single seed
 python scripts/benchmark.py --episodes 1000 --seed 42
+# → scripts/benchmark_results.json
+
+# Convergence analysis (3 detection methods)
+python scripts/convergence_analysis.py
+# → docs/convergence_detail.png
 ```
 
-Raw output saved in [scripts/benchmark_results.json](scripts/benchmark_results.json).
+Raw outputs saved in [scripts/benchmark_multi_seed_results.json](scripts/benchmark_multi_seed_results.json) and [scripts/benchmark_results.json](scripts/benchmark_results.json).
 
 ---
 
 ## Future Work
 
-- Unit + integration tests (highest priority)
+- Integration and end-to-end tests (unit tests in place)
 - DQN / PPO for fine-grained exercise selection
 - Multi-user support with collaborative filtering
 - Native iOS app (HealthKit auto-sync)

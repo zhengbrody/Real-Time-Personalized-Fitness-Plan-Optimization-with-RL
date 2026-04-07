@@ -12,10 +12,14 @@ from .coach_agent import CoachAgent
 from .tools import AgentTools
 from .safety import SafetyGuardrails
 from .state import DailyState
+from .memory import CoachMemory
+from .session_handoff import session_handoff
 
 __all__ = [
     "CoachAgent",
     "AgentTools",
     "SafetyGuardrails",
     "DailyState",
+    "CoachMemory",
+    "session_handoff",
 ]
