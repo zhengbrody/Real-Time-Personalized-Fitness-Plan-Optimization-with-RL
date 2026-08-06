@@ -117,7 +117,9 @@ class TestCoachMemory:
 
     def test_update_preferences_scalar(self, tmp_path):
         mem = CoachMemory(user_id="u1", memory_path=self._tmp_path(tmp_path))
-        mem.update_preferences({"goal": "muscle_gain", "preferred_time_of_day": "morning"})
+        mem.update_preferences(
+            {"goal": "muscle_gain", "preferred_time_of_day": "morning"}
+        )
 
         assert mem.data["preferences"]["goal"] == "muscle_gain"
         assert mem.data["preferences"]["preferred_time_of_day"] == "morning"
@@ -128,7 +130,9 @@ class TestCoachMemory:
         mem.update_preferences({"preferred_workout_types": ["cardio", "yoga"]})
 
         assert mem.data["preferences"]["preferred_workout_types"] == [
-            "strength", "cardio", "yoga"
+            "strength",
+            "cardio",
+            "yoga",
         ]
 
     # ------------------------------------------------- context summary

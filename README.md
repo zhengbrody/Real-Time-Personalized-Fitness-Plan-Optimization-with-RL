@@ -1,410 +1,390 @@
-# ProFit AI — Personalized Fitness with Reinforcement Learning
+# ProFit AI — Safety-Constrained Contextual Bandits for Training Prescription
 
-> Contextual Bandits + Thompson Sampling · GPT-4 AI Coach · Safety-Constrained RL · FastAPI · Streamlit
+> NeuralLinear Thompson Sampling (PyTorch) · Off-policy evaluation with ground-truth calibration · Shared feature transform · FastAPI + Redis + Kafka + PySpark
 
 [![CI](https://github.com/zhengbrody/RL/actions/workflows/ci.yml/badge.svg)](https://github.com/zhengbrody/RL/actions)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A daily training recommender: given today's physiological state, choose one of
+18 workout prescriptions, learn from what the user actually does, and never
+propose something unsafe.
 
 ---
 
 ## Results
 
-> Metrics from **10 independent seeds** (N=1,000 episodes each, seeds 1–10, synthetic body-state data). Values are mean ± std across seeds.
-> Reproduce: `python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 1000`
-> Single seed: `python scripts/benchmark.py --episodes 1000 --seed 42`
+**Online benchmark** — 10 seeds × 5,000 episodes × 100 interleaved users. Mean ± std across seeds.
 
-| Metric | Random Baseline | Rule-based | **Thompson Sampling** |
-|--------|---------------:|----------:|----------------------:|
-| Mean Reward | 0.599 ± 0.011 | 0.611 ± 0.007 | **0.630 ± 0.010** |
-| Improvement vs Random | — | — | **+5.2% ± 1.2%** |
-| Improvement vs Rules | — | — | **+3.0% ± 1.2%** |
-| Convergence Episode | — | — | **ep 67 ± 25** |
+| Policy | Mean reward | Cumulative regret | Final regret rate | Rank AUC | Actions used |
+|--------|------------:|------------------:|------------------:|---------:|-------------:|
+| Random | 0.4604 ± 0.0069 | 1602.7 ± 38.7 | 0.3151 | 0.500 | 18/18 |
+| Rule-based baseline | 0.5013 ± 0.0183 | 1399.1 ± 101.1 | 0.2772 | 0.480 | **3/18** |
+| Beta TS *(no context)* | 0.6260 ± 0.0098 | 764.5 ± 49.5 | 0.1409 | 0.668 | 18/18 |
+| Linear TS | 0.6279 ± 0.0047 | 754.0 ± 18.1 | 0.0944 | 0.782 | 18/18 |
+| **NeuralLinear (PyTorch)** | **0.6605 ± 0.0035** | **588.1 ± 21.0** | **0.0757** | 0.778 | 18/18 |
 
-**+5.2%** reward over random · **+3.0%** over hand-crafted rules · converges at **~ep 67** · results reproducible across 10 seeds · p99 API latency **<50ms**
+Versus the rule-based baseline, NeuralLinear delivers **+31.9% ± 4.8% mean reward**,
+**−57.8% ± 2.5% cumulative regret**, and **−72.7% final regret rate**.
+
+Reproduce: `python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 5000`
+
+### The two comparisons that matter
+
+The three bandit rows share the same posterior machinery
+([`bayes_linear.py`](src/recommendation/bayes_linear.py)), the same exploration
+mechanism, and the same safety gate. They differ only in what they condition on,
+which makes the table an ablation rather than a collection of unrelated models.
+
+**Does context help?** Beta TS → Linear TS. Mean reward barely moves (0.6260 →
+0.6279) but the *final* regret rate drops 33% (0.1409 → 0.0944) and rank AUC
+jumps 0.668 → 0.782. Splitting a run into quintiles shows why. After its first
+1,000 episodes the context-free bandit is done learning — it gains just **+0.009
+reward** over the remaining 4,000 episodes — because it has learned which actions
+are good *on average* and has no mechanism to learn which are good *for this user
+today*. Over the same span Linear TS gains **+0.071**, eight times as much, and is
+still climbing at the end of the run.
+
+**Does learning the representation help?** Linear TS → NeuralLinear. Mean reward
++5.2%, cumulative regret −22%. The reward's dominant term is a squared penalty on
+the gap between prescribed and ideal intensity, and that ideal is a nonlinear
+function of readiness, fatigue and accumulated load — so a model that is linear
+in the raw features cannot represent it, however good its posterior is.
+
+**Action coverage.** The deterministic rule set emits only **3 of 18** actions
+across 5,000 episodes. The other 15 are unreachable by construction, no matter
+how well they would have performed. That is the concrete cost of not exploring.
 
 <details>
-<summary>Learning curves (click to expand)</summary>
+<summary>Learning and regret curves</summary>
 
 ![Learning Curves](docs/learning_curves.png)
-
-*Mean rolling reward (window=50) across 10 seeds. Shaded region = ±1 std. Dashed line = convergence point.*
-
-![Convergence Analysis](docs/convergence_detail.png)
-
-*Three-method convergence analysis: rolling mean threshold (ep 65), change-point detection (ep 50), plateau detection (ep 100). Mean estimate: ep 72 ± 21.*
+![Regret Curves](docs/regret_curves.png)
 
 </details>
 
 ---
 
-## Problem & Why RL
+## Off-policy evaluation, validated against ground truth
 
-Generic training programs ignore daily physiological variation. A plan suitable for a well-rested athlete is inappropriate — and potentially harmful — after poor sleep or high accumulated fatigue.
+You cannot ship an unproven recommender to users to find out whether it is
+better. You estimate its value from logs the current policy already produced —
+and then you have to decide which estimator to believe, because on real data the
+true value is exactly the unknown you were estimating.
 
-**Why Contextual Bandits instead of supervised learning?**
+Here it is knowable. The simulator exposes the noise-free expected reward of
+every action, so the target policy's true value on the logged context
+distribution is computable in closed form. That turns estimator choice from an
+argument into a measurement.
 
-- No labelled dataset of "correct workouts" exists — feedback is implicit (completion, satisfaction)
-- The reward signal arrives *after* the action, not before
-- The action space is discrete (18 workout options) and safety-constrained
-- Thompson Sampling gives Bayesian uncertainty estimates for free, enabling principled exploration without a separate exploration parameter
+**10 replications × 4,000-row logs**, target = trained NeuralLinear, behaviour =
+ε-greedy over the rule baseline:
 
-**Core design decisions:**
+| Estimator | Bias | RMSE | 95% CI coverage | Effective sample size |
+|-----------|-----:|-----:|----------------:|----------------------:|
+| IPS | +0.0037 | 0.0478 | 90% | 8.5% |
+| SNIPS | −0.0035 | 0.0103 | 90% | 8.5% |
+| CIPS (M=10) | −0.1553 | 0.1587 | **0%** | 8.5% |
+| Direct Method | −0.0264 | 0.0272 | **0%** | n/a |
+| **Doubly Robust** | **−0.0017** | **0.0103** | 90% | 8.5% |
+
+*(logging policy ε=0.8; the ε=0.3 arm, where effective sample size collapses to
+3%, is in [`scripts/ope_study_results.json`](scripts/ope_study_results.json))*
+
+- **DR estimates the true policy value to within 0.24%**, and its RMSE is
+  **4.7× lower than IPS**.
+- Translated into the decision an operator actually makes: the true lift over the
+  logging policy was **+43.7%**; DR's off-policy estimate implied **+43.4%** —
+  **0.36 percentage points off**, without touching a user.
+- **The Direct Method's 95% interval never contained the truth**, across all 20
+  runs. It is the lowest-variance estimator in the table and it is confidently
+  wrong — which is why variance alone is a bad way to pick one.
+- Effective sample size is **8.5%**: a 4,000-row log carries the information of
+  ~340 rows for this target. Reporting that alongside the estimate is the
+  difference between a defensible number and a precise-looking one.
+
+![OPE calibration](docs/ope_calibration.png)
+
+Reproduce: `python scripts/run_ope_study.py --replications 10 --log-size 4000`
+
+---
+
+## Why contextual bandits
+
+No labelled dataset of "correct workouts" exists. Feedback is implicit
+(completion, satisfaction), arrives only for the action taken, and arrives after
+the fact. That is a bandit problem, not a supervised one.
 
 | Decision | Choice | Reason |
 |----------|--------|--------|
-| Algorithm | Beta-Bernoulli Thompson Sampling | Sample-efficient, closed-form Bayesian updates |
-| Action space | 18 discrete actions (type × intensity × duration) | Clinically meaningful granularity |
-| Safety layer | Hard-rule filter before bandit selection | RL must never recommend dangerous actions |
-| Reward signal | Weighted composite (completion + adherence + recovery) | Aligns with real training outcomes |
-| Online learning | Kafka-streamed feedback loop | Model improves continuously from real use |
+| Algorithm | NeuralLinear Thompson Sampling | Learned representation for the nonlinearity, **exact** last-layer posterior for calibrated exploration |
+| Exploration | Posterior sampling | No separate exploration parameter to tune; uncertainty comes from the model |
+| Safety | Hard gate *before* sampling | Exploration is confined to the feasible set — the policy cannot override physiology |
+| Action space | 18 discrete (type × intensity × duration) | Clinically meaningful granularity |
+| Online updates | Posteriors only; encoder frozen | Closed-form and cheap; representation retrained offline where full history exists |
+
+**Why not a fully Bayesian neural network?** Its posterior is approximate, and
+the approximation error is worst in the tails — exactly what drives exploration.
+Under-dispersed posteriors make Thompson Sampling collapse to greedy.
+NeuralLinear ([Riquelme et al., ICLR 2018](https://arxiv.org/abs/1802.09127))
+learns the representation by ordinary SGD and keeps the last layer conjugate, so
+the uncertainty that governs exploration stays exact.
 
 ---
 
-## System Architecture
+## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        User Layer                            │
-│   Web UI (Streamlit)  ·  iOS App (future)  ·  API clients   │
-└──────────────────────────────┬───────────────────────────────┘
-                               │
-┌──────────────────────────────▼───────────────────────────────┐
-│              API Gateway  (FastAPI)                          │
-│         Authentication · Rate Limiting · Validation          │
-└────────┬──────────────────────────────────────┬──────────────┘
-         │                                      │
-┌────────▼──────────────┐          ┌────────────▼─────────────┐
-│  Recommendation Engine│          │     AI Coach Agent        │
-│                       │          │                           │
-│  1. Safety Gate       │          │  GPT-4 · Tool Calling     │
-│     (hard rules)      │          │  Cross-session memory     │
-│  2. Feature extract   │          │  (coach_memory.json)      │
-│  3. Thompson Sampling │          │  Context-aware safety     │
-│  4. Action selection  │          │  Session handoff          │
-│                       │          └───────────────────────────┘
-└────────┬──────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────┐
-│                       Data Layer                              │
-│  Feature Store (Feast) · SQLite · Redis cache · Kafka queue   │
-└────────┬──────────────────────────────────────────────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────┐
-│              External Sources                                 │
-│   Apple HealthKit · Oura Ring API v2 · OpenAI API             │
-└───────────────────────────────────────────────────────────────┘
+                    ┌──────────────────────────────────────┐
+  wearable /        │  Shared feature transform (34 feats) │
+  manual signals ──▶│  src/feature_store/transform.py      │◀── rolling block
+                    └───────────────┬──────────────────────┘    (Redis cache)
+                                    │
+                    ┌───────────────▼──────────────────────┐
+                    │  Safety gate — hard rules            │
+                    │  src/safety/action_filter.py         │
+                    │  18 actions ──▶ feasible subset      │
+                    └───────────────┬──────────────────────┘
+                                    │
+                    ┌───────────────▼──────────────────────┐
+                    │  NeuralLinear Thompson Sampling      │
+                    │  MLP(64,32) ▶ 32-d repr ▶ NIG per arm│
+                    └───────────────┬──────────────────────┘
+                                    │
+              ┌─────────────────────┴───────────────────────┐
+              │                                             │
+    ┌─────────▼──────────┐                    ┌─────────────▼────────────┐
+    │ FastAPI serving    │                    │ Kafka feedback stream    │
+    │ p99 4.4 ms         │                    │ loop closes in 7.3 ms    │
+    └────────────────────┘                    └─────────────┬────────────┘
+                                                            │
+                    ┌───────────────────────────────────────▼──────────┐
+                    │ Posterior update (closed form) ▶ next request     │
+                    └──────────────────────────────────────────────────┘
+
+   Offline: PySpark materialises the rolling block for every user-day
+            src/feature_store/spark_pipeline.py
 ```
 
-**Data flow:**
-```
-Wearable data / manual entry
-  → 30+ engineered features (HRV trend, sleep debt, ACWR, rolling z-scores)
-  → Safety Gate filters dangerous actions
-  → Thompson Sampling selects from remaining actions
-  → User completes (or skips) workout
-  → Feedback streamed via Kafka
-  → Beta parameters updated → better next recommendation
-```
+### One transform, one gate, no second copies
+
+Training–serving skew rarely arrives as someone deliberately rewriting feature
+logic. It arrives as a "small" convenience in the serving path — a different
+default for a missing field, a re-ordered column list — that nothing checks.
+
+This repo previously had two instances of exactly that: the benchmark carried a
+private copy of the safety filter that omitted the consecutive-hard-days rule (so
+the policy was *measured* under weaker constraints than it *ran* under), and the
+feature vector was assembled independently on each path.
+
+Now the transform lives in one module and the gate in another, both imported by
+the benchmark, the API and the Kafka consumer — and
+[`tests/test_feature_parity.py`](tests/test_feature_parity.py) fails if the paths
+ever disagree:
+
+- offline vs. online assembly of the same record → **bit-identical vectors**
+- warm cache vs. cold cache → bit-identical
+- Redis unreachable, or a corrupt cache entry → identical output, slower
+- benchmark gate vs. serving gate → identical allowed sets
+- missing fields **fail closed** (a recommender that gets bolder the less it knows is dangerous)
+
+The rolling block is computed twice by design — pandas per request, PySpark for
+the nightly materialisation — so
+[`tests/test_spark_pipeline.py`](tests/test_spark_pipeline.py) runs both over the
+same history and asserts agreement to 1e-9 on every field, including the
+partial-window regime early in a user's history.
 
 ---
 
-## Key Components
+## Serving
 
-### 1. Thompson Sampling Contextual Bandit
+Real HTTP against uvicorn on loopback, 2,000 requests per arm:
 
-`src/recommendation/contextual_bandits.py`
+| Arm | p50 | p95 | p99 | Throughput |
+|-----|----:|----:|----:|-----------:|
+| `GET /health` (transport floor) | 0.31 ms | 0.42 ms | 0.61 ms | — |
+| `POST /recommend_rl` — cache miss | 3.89 ms | 5.50 ms | 7.21 ms | — |
+| `POST /recommend_rl` — cache hit | 2.37 ms | 3.35 ms | **4.41 ms** | — |
+| `POST /recommend_rl` — 16 concurrent | 31.4 ms | 36.0 ms | 39.0 ms | **509 req/s** |
+| Compute only (no HTTP) | 1.59 ms | 2.20 ms | 2.74 ms | — |
 
-Beta-Bernoulli model over 18 discrete workout actions. Each action maintains independent Beta(α, β) parameters. At each step:
+The Redis feature cache cuts p99 from 7.21 ms to 4.41 ms (**1.6×**); transport
+accounts for 0.78 ms of the 2.37 ms p50.
 
-```python
-# Sample from posterior for each allowed action
-sample = np.random.beta(alpha[action_id], beta[action_id])
+> An earlier version of this benchmark used FastAPI's in-process `TestClient` and
+> reported sub-millisecond p99. That number was real but answered the wrong
+> question — it excludes the event loop, the socket and JSON-over-the-wire, which
+> is most of what a client waits for. Both are now measured, and the gap between
+> them is reported rather than hidden.
 
-# Update after observing binary reward
-alpha[action_id] += 1 if reward > 0.5 else 0
-beta[action_id]  += 0 if reward > 0.5 else 1
-```
+Reproduce: `python scripts/benchmark_latency.py --n 2000`
 
-Also implements `LinearContextualBandit` with full Bayesian linear regression posterior updates (B matrix, f vector) for continuous reward signals.
+### Kafka online-learning loop
 
-### 2. Safety-Constrained Action Filter
+2,000 events through a real broker, paced at 200 events/s:
 
-`src/safety/safety_gate.py`
+| Metric | Value |
+|--------|------:|
+| Events produced → consumed → **posterior updates applied** | 2000 → 2000 → **2000** |
+| Producer/consumer feature mismatches | **0** |
+| Loop latency (publish → model updated) | p50 **7.3 ms**, p95 9.5 ms, p99 16.7 ms |
 
-Hard rules applied **before** bandit selection — RL cannot override these:
+Both checks are assertions, not observations. "Kafka-based online learning" fails
+silently in two ways: the loop is plumbed but never closes (events flow, nothing
+reaches the model), or it closes but the consumer rebuilds features that do not
+match what the recommendation was made from. So the script requires posterior
+counts to rise by exactly the number of consumed events, and re-derives features
+through the shared transform to compare against the decision-time vector.
 
-| Condition | Constraint |
-|-----------|-----------|
-| Readiness < 30 or Fatigue > 8 | REST or RECOVERY only |
-| Fatigue > 6 | Max LOW intensity |
-| 3+ consecutive high-load days | Max MEDIUM intensity |
-| HRV below threshold | Restricted action space |
+**This test found a real bug.** The first run reported *−18,000* posterior
+updates: loading a checkpoint restores the posteriors but not the replay buffer,
+so the first online encoder retrain rebuilt the posteriors from an empty buffer
+and discarded everything the model had learned. The fix is architectural —
+serving freezes the encoder and updates only the last-layer posteriors, which is
+the right split anyway ([`neural_linear.py`](src/recommendation/neural_linear.py)).
 
-### 3. Feature Engineering Pipeline
-
-`src/feature_store/feature_engineering.py`
-
-30+ physiological features from raw wearable data:
-
-- **Recovery**: HRV 7-day rolling mean, z-score, trend; sleep debt; resting HR deviation from baseline
-- **Load**: Acute:Chronic Workload Ratio (ACWR), 7-day calorie/step sums
-- **Consistency**: Training streak, completion rate, days since last session
-- **Temporal**: Day-of-week, is_weekend (captures weekly periodicity)
-
-### 4. Reward Function
-
-`src/recommendation/reward_fn.py`
-
-Multi-component weighted reward:
-
-```
-reward = 1.0 × completion
-       + 0.5 × adherence_ratio
-       - 1.0 × recovery_decline
-       + 0.3 × satisfaction
-       - 2.0 × overtraining_penalty
-```
-
-### 5. Online Learning Loop
-
-`src/online_learning/loop.py`
-
-Closed loop: state → recommendation → user feedback → Kafka event → Beta parameter update. Kafka is optional — system falls back gracefully to local event log.
-
-### 6. GPT-4 AI Coach with Agent Harness
-
-`src/agent/coach_agent.py` · `src/agent/memory.py` · `src/agent/session_handoff.py`
-
-Four-layer architecture with cross-session memory:
-1. **Memory Load** — reads persistent `coach_memory.json` (training history, injuries, preferences, cumulative stats)
-2. **Safety Gate** — blocks unsafe queries; active injuries from memory auto-injected into safety context
-3. **Recommendation Engine** — provides structured plan with user history context
-4. **LLM Agent** — translates plan into natural language, handles Q&A
-5. **Session Handoff** — summarizes session key points, updates memory, persists to disk
-
-The agent harness enables context-aware coaching: if a user reported a knee injury in a prior session, all subsequent sessions automatically filter high-impact actions without the user needing to re-state it.
-
-Tool calls available: `adjust_plan()`, `explain_plan()`, `mood_checkin()`, `set_micro_goal()`, `log_event()`.
+Reproduce: `python scripts/run_kafka_loop.py --events 2000 --rate 200`
 
 ---
 
-## Technology Stack
+## The simulator
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| RL Algorithm | Thompson Sampling (Beta-Bernoulli) | Workout recommendation |
-| ML Framework | NumPy + SciPy | Bayesian inference & Thompson Sampling |
-| Feature Store | Custom (Pandas) | Feature engineering pipeline |
-| Streaming | Apache Kafka | Online learning pipeline |
-| API | FastAPI + Pydantic | Model serving (<50ms p99) |
-| AI Coach | OpenAI GPT-4 | Conversational coaching |
-| Web UI | Streamlit + Plotly | Interactive dashboard |
-| Data Sources | Apple HealthKit, Oura API v2 | Wearable integration |
-| Containerisation | Docker + Docker Compose | One-command deployment |
-| CI/CD | GitHub Actions | Lint, test, security scan |
-| Data Validation | Pydantic schemas | Input quality enforcement |
-| Big Data (future) | PySpark | Multi-user scale-out |
+Every number above comes from simulation. What the simulator does and does not
+model determines what those numbers are worth, so:
+
+**It models** heterogeneous users (each draws a latent tolerance, modality
+affinity and duration preference), partial observability (stated tolerance
+correlates with the latent value at r = 0.76 but never reveals it), non-stationarity
+(fitness adapts to load, with detraining deliberately slower than adaptation),
+and stochastic adherence.
+
+**It does not model** real physiology, real users, or anything validated against
+clinical outcomes. The reward function is a designed objective, not a measured
+one.
+
+An earlier version scored policies against a deterministic function of two
+observable variables. That is degenerate — the optimal policy is a lookup table,
+there is nothing to personalise, and a context-free bandit does about as well as
+a contextual one — so any "RL beats rules" number measured there says very
+little. The current version was rebuilt specifically so that the comparisons
+above are not artefacts of the environment.
+
+[`tests/test_simulation_and_runner.py`](tests/test_simulation_and_runner.py) pins
+the properties the conclusions rest on: reproducibility, bounded rewards,
+heterogeneity, incomplete observability, and the adaptation asymmetry.
 
 ---
 
-## Quick Start
-
-### Option A — Docker (all services, one command)
-
-```bash
-git clone https://github.com/zhengbrody/RL.git && cd RL
-
-# Configure
-cp .env.example .env
-# Edit .env: add OPENAI_API_KEY
-
-# Launch (Web UI + API + Kafka + Redis)
-docker-compose up
-
-# Open
-# Web interface → http://localhost:8501
-# API docs      → http://localhost:8000/docs
-```
-
-### Option B — Local Python
+## Quick start
 
 ```bash
 pip install -r requirements.txt
-
-cp .env.example .env   # add OPENAI_API_KEY
-
-./start_web.sh         # starts API server + Streamlit
 ```
 
-### Option C — Reproduce benchmark only (minimal deps)
+Reproduce the headline benchmark (no services needed):
 
 ```bash
-pip install numpy scipy matplotlib
-python scripts/benchmark.py --episodes 1000 --seed 42
-# → scripts/benchmark_results.json
-# → scripts/benchmark_learning_curve.png
+python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 5000
+```
+
+Train and serve the policy:
+
+```bash
+python scripts/train_policy.py --episodes 20000 --users 200
+docker-compose up -d redis
+uvicorn src.serving.api_server:app --port 8000
+```
+
+```bash
+curl -X POST localhost:8000/recommend_rl -H 'Content-Type: application/json' -d '{"user_id":"u1","signals":{"readiness_score":72,"hrv":55,"sleep_duration_hours":7.4,"fatigue":3,"goal":"strength"}}'
+```
+
+Full stack (Redis + Kafka + API + UI):
+
+```bash
+docker-compose up
 ```
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
-RL/
-├── scripts/
-│   ├── benchmark.py                 # Single-seed benchmark
-│   ├── benchmark_multi_seed.py      # Multi-seed aggregation (10 seeds)
-│   ├── convergence_analysis.py      # 3-method convergence detection
-│   ├── benchmark_results.json       # Single-seed results
-│   └── benchmark_multi_seed_results.json  # Aggregated results
-├── docs/
-│   ├── learning_curves.png          # Mean ± std across seeds
-│   ├── convergence_analysis.png     # Per-seed convergence scatter
-│   └── convergence_detail.png       # 3-panel convergence diagnostic
-├── src/
-│   ├── recommendation/
-│   │   ├── contextual_bandits.py    # Thompson Sampling (Beta + Linear)
-│   │   ├── hybrid_recommender.py    # Rules + RL hybrid
-│   │   ├── action_space.py          # 18 discrete workout actions
-│   │   └── reward_fn.py             # Multi-component reward
-│   ├── safety/
-│   │   └── safety_gate.py           # Hard-rule action filter
-│   ├── feature_store/
-│   │   └── feature_engineering.py  # 30+ physiological features
-│   ├── serving/
-│   │   └── api_server.py            # FastAPI endpoints
-│   ├── agent/
-│   │   ├── coach_agent.py           # GPT-4 coach with agent harness
-│   │   ├── memory.py                # Cross-session memory persistence
-│   │   ├── session_handoff.py       # End-of-session summarization
-│   │   ├── safety.py                # LLM safety guardrails
-│   │   └── tools.py                 # Agent tool definitions
-│   ├── online_learning/
-│   │   ├── loop.py                  # Feedback → model update
-│   │   └── kafka_consumer.py        # Kafka streaming consumer
-│   ├── data_collection/
-│   │   ├── apple_health.py
-│   │   ├── oura_api.py
-│   │   └── preprocess.py
-│   ├── ab_testing/
-│   │   └── experiment_framework.py
-│   └── validation/
-│       └── schemas.py               # Pydantic data schemas
-├── tests/
-│   ├── test_contextual_bandits.py   # Thompson Sampling tests
-│   ├── test_safety_gate.py          # Safety constraint tests
-│   ├── test_reward_fn.py            # Reward function tests
-│   ├── test_action_space.py         # Action space tests
-│   ├── test_hybrid_recommender.py   # Hybrid recommender tests
-│   ├── test_feature_engineering.py  # Feature pipeline tests
-│   ├── test_validation.py           # Schema validation tests
-│   ├── test_api_server.py           # FastAPI endpoint tests
-│   ├── test_coach_memory.py         # Agent memory + handoff tests
-│   └── test_convergence_analysis.py # Convergence detection tests
-├── web_app_pro.py                   # Streamlit UI (main)
-├── Dockerfile                       # Multi-stage build
-├── docker-compose.yml               # Full stack deployment
-├── .github/workflows/ci.yml         # GitHub Actions CI
-├── requirements.txt
-├── requirements-dev.txt
-└── .env.example
+src/
+├── feature_store/
+│   ├── transform.py          # THE shared feature transform (34 features)
+│   └── spark_pipeline.py     # PySpark offline materialisation
+├── safety/
+│   └── action_filter.py      # THE safety gate (pure, fail-closed)
+├── recommendation/
+│   ├── bayes_linear.py       # NIG posteriors, shared by both bandits
+│   ├── neural_linear.py      # PyTorch NeuralLinear Thompson Sampling
+│   ├── linear_ts.py          # Linear TS — the representation ablation
+│   └── contextual_bandits.py # Beta-Bernoulli TS — the context-free control
+├── simulation/
+│   └── fitness_env.py        # Heterogeneous, non-stationary population
+├── evaluation/
+│   ├── ope.py                # IPS / SNIPS / CIPS / DM / DR + diagnostics
+│   ├── policies.py           # Uniform policy interface with propensities
+│   └── runner.py             # Benchmark loop + logged-data collection
+├── serving/
+│   ├── feature_service.py    # Redis-cached feature assembly
+│   ├── policy_service.py     # Checkpoint loading + inference
+│   └── api_server.py         # FastAPI
+└── agent/                    # GPT-4 coaching layer (explanation, memory)
+
+scripts/
+├── benchmark.py              # Single-seed benchmark
+├── benchmark_multi_seed.py   # 10-seed aggregation → README numbers
+├── run_ope_study.py          # Estimator calibration vs ground truth
+├── benchmark_latency.py      # Real-HTTP latency + throughput
+├── run_kafka_loop.py         # Closed-loop verification
+└── train_policy.py           # Train + persist the serving checkpoint
 ```
 
 ---
 
-## Web Interface
+## Tests
 
-[web_app_pro.py](web_app_pro.py) — Streamlit application with four tabs:
+**244 tests.** Core modules: `fitness_env` 100%, `spark_pipeline` 97%,
+`linear_ts` 96%, `ope` 94%, `bayes_linear` 94%, `runner` 93%, `transform` 91%,
+`action_filter` 91%, `feature_service` 90%, `neural_linear` 89%.
 
-| Tab | What it does |
-|-----|-------------|
-| **Recommend** | Input today's body state → get RL recommendation → thumbs up/down feedback |
-| **AI Coach** | GPT-4 chat with full health context; explains recommendations in plain English |
-| **Analytics** | 7/14/30-day trends, HRV/sleep/fatigue correlation heatmap, training volume charts |
-| **Settings** | User profile, historical data viewer, manual data entry, CSV/JSON upload |
+```bash
+pytest tests/ -q --cov=src
+```
 
-Dark/Light mode toggle. No iOS developer account needed — manual data entry covers Apple Watch + Oura Ring values.
-
----
-
-## Skills Demonstrated
-
-### Machine Learning Engineering
-- Bayesian RL (Beta-Bernoulli + Linear Thompson Sampling)
-- Safety-constrained action selection (hard rules before RL)
-- Multi-component reward design
-- Online learning with incremental model updates
-- Reproducible simulation benchmarking (10-seed robustness check with confidence intervals)
-- Multi-method convergence analysis (rolling threshold, change-point detection, plateau detection)
-
-### AI Engineering
-- Agent harness with cross-session memory persistence (JSON-backed structured memory)
-- Context-aware safety filtering (injury history auto-injected from memory into safety gate)
-- Session handoff — automatic summarization and state carry-over between conversations
-
-### Software Engineering
-- Production API design (FastAPI, Pydantic v2 validation)
-- Event-driven architecture (Kafka streaming)
-- Feature store pattern (custom Pandas pipeline)
-- Containerisation with multi-stage Docker builds
-- CI/CD pipeline (GitHub Actions: lint, test, security scan)
-- 128 unit tests, core RL pipeline at 96–100% coverage
+The tests worth reading are the ones that pin properties rather than outputs:
+Doubly Robust staying accurate under a deliberately broken reward model, the
+posterior rebuild after an encoder retrain, cold/warm cache bit-parity, and the
+safety gate failing closed on missing fields.
 
 ---
 
-## Honest Limitations
+## Honest limitations
 
 | Claim | Reality |
 |-------|---------|
-| Benchmark metrics | Simulated environment, not real users |
-| Kafka / Feast | Kafka integrated with local fallback; Feast replaced by custom Pandas pipeline |
-| iOS integration | Data collection code written; no deployed app |
-| `tests/` directory | 10 test modules, 128 tests. Core RL modules (bandits, safety, reward, recommender) at 96–100% line coverage. API endpoints at 80%. |
+| All reported metrics | Simulated population. No real users, no clinical validation. |
+| Off-policy evaluation | Correct estimators, validated against simulator ground truth — which is exactly the validation that is *impossible* on real logs. |
+| Reward function | A designed objective. Whether it correlates with real training outcomes is untested. |
+| Latency / throughput | Single uvicorn worker on a laptop, loopback socket. No production load profile. |
+| PySpark pipeline | Correct and parity-tested, but run at a scale pandas would handle. It is the right shape, not a demonstration of scale. |
+| iOS integration | Data-collection code written; no deployed app. |
+| GPT-4 coach | Functional explanation layer; not part of the recommendation policy. |
 
 ---
 
-## Reproducing Results
+## Future work
 
-```bash
-# Multi-seed (generates numbers in this README)
-python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 1000
-# → scripts/benchmark_multi_seed_results.json
-# → docs/learning_curves.png
-# → docs/convergence_analysis.png
-
-# Single seed
-python scripts/benchmark.py --episodes 1000 --seed 42
-# → scripts/benchmark_results.json
-
-# Convergence analysis (3 detection methods)
-python scripts/convergence_analysis.py
-# → docs/convergence_detail.png
-```
-
-Raw outputs saved in [scripts/benchmark_multi_seed_results.json](scripts/benchmark_multi_seed_results.json) and [scripts/benchmark_results.json](scripts/benchmark_results.json).
-
----
-
-## Future Work
-
-- Integration and end-to-end tests (unit tests in place)
-- DQN / PPO for fine-grained exercise selection
-- Multi-user support with collaborative filtering
-- Native iOS app (HealthKit auto-sync)
-- Model drift monitoring (Evidently AI)
-- Cloud deployment (AWS/GCP + Kubernetes)
+- Off-policy *learning* (not just evaluation): train directly on logged data with DR objectives
+- Delayed and censored rewards — adherence is observed days later
+- Non-stationary posteriors (discounted or sliding-window) for drifting preferences
+- Contextual safety: learn the constraint boundary instead of hand-coding it
+- Real deployment with a shadow-mode A/B against the rule baseline
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Not a medical device. See license for full disclaimers.
-
----
-
-## Contact
-
-**Author**: [Your Name] · [LinkedIn] · [Email]
-
-⭐ Star if useful · Issues welcome · PRs open
+MIT — see [LICENSE](LICENSE).

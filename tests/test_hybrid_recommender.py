@@ -1,13 +1,38 @@
-"""Tests for the hybrid recommender module."""
+"""Tests for the hybrid recommender module.
+
+Stage-2: the engine now returns the dual-layer `Recommendation` shape.
+These tests cover both the new module-level `recommend(TodayRequest)` entry
+point and the legacy-dict shim on `HybridRecommender.recommend`, which
+builds its dict from the same `Recommendation`.
+"""
 
 import pytest
-from unittest.mock import patch, MagicMock
-from src.recommendation.hybrid_recommender import HybridRecommender
-from src.recommendation.action_space import ActionSpace
+from src.recommendation.hybrid_recommender import HybridRecommender, recommend
+from src.validation.schemas import (
+    ManualCheckIn,
+    RecentSession,
+    Recommendation,
+    TodayRequest,
+    WearableData,
+)
 
 
-class TestHybridRecommender:
-    """Tests for the HybridRecommender class."""
+def _req(**overrides) -> TodayRequest:
+    """Small helper to build a TodayRequest with sane defaults."""
+    wearable = WearableData(**overrides.pop("wearable", {}))
+    manual = ManualCheckIn(**overrides.pop("manual", {}))
+    recent = overrides.pop("recent_training", [])
+    return TodayRequest(
+        wearable=wearable, manual=manual, recent_training=recent, **overrides
+    )
+
+
+class TestHybridRecommenderLegacyShim:
+    """Cover the legacy dict path on `HybridRecommender.recommend`.
+
+    The shim now proxies to the new dual-layer engine and maps its output
+    back to the old dict shape, so these tests assert the mapping works.
+    """
 
     def test_initialization(self):
         recommender = HybridRecommender()
@@ -16,7 +41,6 @@ class TestHybridRecommender:
         assert recommender.bandit is not None
 
     def test_initialization_without_rl(self):
-        """Line 39: use_rl=False sets self.bandit = None."""
         recommender = HybridRecommender(use_rl=False)
         assert recommender.bandit is None
 
@@ -28,18 +52,24 @@ class TestHybridRecommender:
             "resting_hr": 60,
             "sleep_duration_hours": 8,
             "fatigue": 3,
-            "soreness": 2,
+            "soreness": {"legs": 2},
             "activity_score": 70,
         }
         result = recommender.recommend(state)
-        assert result is not None
         assert isinstance(result, dict)
-        assert "action_id" in result
-        assert "workout_type" in result
-        assert "intensity" in result
-        assert "duration_minutes" in result
+        for k in (
+            "action_id",
+            "workout_type",
+            "intensity",
+            "duration_minutes",
+            "description",
+            "safety_check",
+            "rationale",
+            "recommendation",
+        ):
+            assert k in result
 
-    def test_recommend_low_readiness_suggests_rest(self):
+    def test_recommend_low_readiness_is_conservative(self):
         recommender = HybridRecommender()
         state = {
             "readiness_score": 20,
@@ -47,15 +77,15 @@ class TestHybridRecommender:
             "resting_hr": 85,
             "sleep_duration_hours": 3,
             "fatigue": 9,
-            "soreness": 8,
+            "soreness": {"legs": 8},
             "activity_score": 10,
         }
         result = recommender.recommend(state)
-        # With very poor readiness, should recommend rest or recovery
-        assert result is not None
-        assert "action_id" in result
+        # Legacy intensity should collapse to LOW/NONE with such a profile.
+        assert result["intensity"] in ("LOW", "NONE")
+        assert result["workout_type"] in ("REST", "RECOVERY")
 
-    def test_recommend_high_readiness(self):
+    def test_recommend_high_readiness_permits_strength(self):
         recommender = HybridRecommender()
         state = {
             "readiness_score": 95,
@@ -63,14 +93,14 @@ class TestHybridRecommender:
             "resting_hr": 50,
             "sleep_duration_hours": 9,
             "fatigue": 1,
-            "soreness": 1,
+            "soreness": {"legs": 1},
             "activity_score": 95,
         }
         result = recommender.recommend(state)
-        assert result is not None
-        assert isinstance(result, dict)
+        assert result["workout_type"] == "STRENGTH"
+        assert result["intensity"] in ("MEDIUM", "HIGH")
 
-    def test_recommend_with_use_rl_false(self):
+    def test_update_with_bandit_does_not_raise(self):
         recommender = HybridRecommender(use_rl=True)
         state = {
             "readiness_score": 75,
@@ -78,307 +108,176 @@ class TestHybridRecommender:
             "resting_hr": 60,
             "sleep_duration_hours": 8,
             "fatigue": 3,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        # Test using rule-based recommendations
-        result = recommender.recommend(state, use_rl=False)
-        assert result is not None
-        assert isinstance(result, dict)
-
-    def test_recommend_empty_allowed_actions_defaults_to_rest(self):
-        """Line 62: When filter_actions returns empty list, fallback to [0] (REST)."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 75,
-            "hrv": 50,
-            "resting_hr": 60,
-            "sleep_duration_hours": 8,
-            "fatigue": 3,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        with patch.object(
-            recommender.safety_gate, "filter_actions", return_value=[]
-        ):
-            result = recommender.recommend(state)
-            assert result["action_id"] == 0
-            assert result["workout_type"] == "REST"
-
-    def _make_all_actions_allowed(self, recommender, state):
-        """Helper: mock safety gate to return all actions as allowed."""
-        all_ids = list(range(recommender.action_space.get_action_count()))
-        return patch.object(
-            recommender.safety_gate, "filter_actions", return_value=all_ids
-        )
-
-    def _make_safe_check(self, recommender):
-        """Helper: mock safety check_state to return is_safe=True."""
-        safe_result = MagicMock()
-        safe_result.is_safe = True
-        safe_result.message = "All clear"
-        return patch.object(
-            recommender.safety_gate, "check_state", return_value=safe_result
-        )
-
-    def test_rule_based_low_readiness_returns_rest(self):
-        """Line 114: readiness < 40 returns REST (action 0)."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 30,
-            "sleep_duration_hours": 7,
-            "fatigue": 3,
-            "days_since_training": 1,
-            "hrv": 40,
-            "resting_hr": 60,
-            "soreness": 2,
-            "activity_score": 50,
-        }
-        # Mock safety gate to allow all actions so we reach rule-based logic
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            assert result["action_id"] == 0
-            assert result["workout_type"] == "REST"
-
-    def test_rule_based_low_sleep_returns_rest(self):
-        """Line 114: sleep_hours < 5 returns REST (action 0)."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 80,
-            "sleep_duration_hours": 4,
-            "fatigue": 3,
-            "days_since_training": 1,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            assert result["action_id"] == 0
-            assert result["workout_type"] == "REST"
-
-    def test_rule_based_high_fatigue_returns_recovery(self):
-        """Lines 118-124: fatigue >= 7 returns RECOVERY action."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 60,
-            "sleep_duration_hours": 7,
-            "fatigue": 8,
-            "days_since_training": 1,
-            "hrv": 50,
-            "resting_hr": 60,
-            "soreness": 2,
-            "activity_score": 50,
-        }
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            assert result["workout_type"] == "RECOVERY"
-
-    def test_rule_based_high_fatigue_no_recovery_actions_falls_through(self):
-        """Lines 118-124: High fatigue but no RECOVERY in allowed_actions."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 60,
-            "sleep_duration_hours": 7,
-            "fatigue": 8,
-            "days_since_training": 1,
-            "hrv": 50,
-            "resting_hr": 60,
-            "soreness": 2,
-            "activity_score": 50,
-        }
-        # Mock filter_actions to return only STRENGTH MEDIUM ids (no RECOVERY)
-        action_space = recommender.action_space
-        medium_strength_ids = [
-            a.action_id
-            for a in action_space.get_all_actions()
-            if a.workout_type == "STRENGTH" and a.intensity == "MEDIUM"
-        ]
-        with self._make_safe_check(recommender), \
-             patch.object(
-                 recommender.safety_gate, "filter_actions", return_value=medium_strength_ids
-             ):
-            result = recommender.recommend(state)
-            # No RECOVERY found; days_since_training=1 so skips rule 3;
-            # no LOW in medium_strength_ids, so falls through to allowed_actions[0]
-            assert result["action_id"] == medium_strength_ids[0]
-
-    def test_rule_based_long_rest_returns_medium(self):
-        """Lines 128-134: days_since_training >= 3 returns MEDIUM intensity."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 70,
-            "sleep_duration_hours": 8,
-            "fatigue": 4,
-            "days_since_training": 4,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            assert result["intensity"] == "MEDIUM"
-
-    def test_rule_based_long_rest_no_medium_actions_falls_through(self):
-        """Lines 128-134: days_since >= 3 but no MEDIUM actions available."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 70,
-            "sleep_duration_hours": 8,
-            "fatigue": 4,
-            "days_since_training": 4,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        # Only allow HIGH intensity actions
-        action_space = recommender.action_space
-        high_ids = [
-            a.action_id
-            for a in action_space.get_all_actions()
-            if a.intensity == "HIGH"
-        ]
-        with self._make_safe_check(recommender), \
-             patch.object(
-                 recommender.safety_gate, "filter_actions", return_value=high_ids
-             ):
-            result = recommender.recommend(state)
-            # No MEDIUM and no LOW -> falls through to allowed_actions[0]
-            assert result["action_id"] == high_ids[0]
-
-    def test_rule_based_fallback_to_allowed_actions_first(self):
-        """Line 145: No LOW intensity actions -> return allowed_actions[0]."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 70,
-            "sleep_duration_hours": 8,
-            "fatigue": 4,
-            "days_since_training": 1,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        # Only allow HIGH intensity actions (no LOW ones)
-        action_space = recommender.action_space
-        high_ids = [
-            a.action_id
-            for a in action_space.get_all_actions()
-            if a.intensity == "HIGH"
-        ]
-        with self._make_safe_check(recommender), \
-             patch.object(
-                 recommender.safety_gate, "filter_actions", return_value=high_ids
-             ):
-            result = recommender.recommend(state)
-            assert result["action_id"] == high_ids[0]
-
-    def test_rationale_rest_day(self):
-        """Line 153: REST workout generates rest-day rationale."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 30,
-            "sleep_duration_hours": 4,
-            "fatigue": 3,
-            "days_since_training": 1,
-            "hrv": 40,
-            "resting_hr": 60,
-            "soreness": 2,
-            "activity_score": 50,
-        }
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            assert result["workout_type"] == "REST"
-            assert "Rest day recommended" in result["rationale"]
-            assert "readiness" in result["rationale"].lower()
-
-    def test_rationale_low_intensity(self):
-        """Line 155: LOW intensity, non-REST generates recovery state rationale."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 70,
-            "sleep_duration_hours": 8,
-            "fatigue": 4,
-            "days_since_training": 1,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            # Default rule path: good readiness, low fatigue, days_since=1
-            # Falls to LOW intensity default
-            assert result["intensity"] == "LOW"
-            assert "recovery state" in result["rationale"].lower()
-
-    def test_rationale_medium_or_high_intensity(self):
-        """Line 157: Non-REST, non-LOW intensity generates 'well recovered' rationale."""
-        recommender = HybridRecommender(use_rl=False)
-        state = {
-            "readiness_score": 70,
-            "sleep_duration_hours": 8,
-            "fatigue": 4,
-            "days_since_training": 4,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
-        }
-        with self._make_safe_check(recommender), \
-             self._make_all_actions_allowed(recommender, state):
-            result = recommender.recommend(state)
-            # days_since >= 3 triggers MEDIUM
-            assert result["intensity"] == "MEDIUM"
-            assert "well recovered" in result["rationale"].lower()
-
-    def test_update_with_bandit(self):
-        """Lines 161-162: update() calls bandit.update when bandit exists."""
-        recommender = HybridRecommender(use_rl=True)
-        state = {
-            "readiness_score": 75,
-            "hrv": 50,
-            "resting_hr": 60,
-            "sleep_duration_hours": 8,
-            "fatigue": 3,
-            "soreness": 2,
+            "soreness": {"legs": 2},
             "activity_score": 70,
         }
         result = recommender.recommend(state)
-        # Should not raise
         recommender.update(result["action_id"], state, 0.8)
-        # Verify bandit was updated by checking counts increased
         assert recommender.bandit.action_counts[result["action_id"]] == 1
 
-    def test_update_without_bandit(self):
-        """Lines 161-162: update() is a no-op when bandit is None."""
+    def test_update_without_bandit_is_noop(self):
         recommender = HybridRecommender(use_rl=False)
         assert recommender.bandit is None
-        # Should not raise
         recommender.update(0, {}, 0.5)
 
-    def test_recommend_no_rl_constructor_uses_rules(self):
-        """use_rl=False constructor -> recommend uses rule-based path."""
+
+class TestHybridRecommenderDualLayer:
+    """Scenarios ported from the old single-action tests -- now asserting the
+    new dual-layer `Recommendation` shape produced by `recommend(TodayRequest)`.
+    """
+
+    def test_low_readiness_downshifts_intensity(self):
+        """Old: low readiness -> REST. New: low readiness stacked with other
+        mild issues raises risk to at least elevated, yielding a light/recovery/rest session.
+        """
+        req = _req(
+            wearable={
+                "readiness_score": 25,
+                "sleep_hours": 5.0,
+                "hrv": 28,
+                "resting_hr": 78,
+            },
+            manual={"fatigue": 7},
+        )
+        rec = recommend(req)
+        assert isinstance(rec, Recommendation)
+        assert rec.today_decision.risk_level in ("elevated", "high")
+        assert rec.today_decision.recommended_intensity in ("light", "recovery", "rest")
+
+    def test_low_sleep_downshifts_intensity(self):
+        """Old: sleep_hours < 5 -> REST. New: severe sleep deficit stacks with
+        low readiness to yield elevated/high risk and a light-or-easier session."""
+        req = _req(
+            wearable={
+                "readiness_score": 45,
+                "sleep_hours": 4.0,
+                "hrv": 35,
+                "resting_hr": 65,
+            },
+            manual={"fatigue": 6},
+        )
+        rec = recommend(req)
+        assert rec.today_decision.risk_level in ("elevated", "high")
+        assert rec.today_decision.recommended_intensity in ("light", "recovery", "rest")
+
+    def test_high_fatigue_avoids_hard_session(self):
+        """Old: fatigue >= 7 -> RECOVERY. New: severe fatigue alone may only
+        land in 'moderate' risk bucket, but the session never goes to 'hard'."""
+        req = _req(
+            wearable={
+                "readiness_score": 60,
+                "sleep_hours": 7,
+                "hrv": 50,
+                "resting_hr": 60,
+            },
+            manual={"fatigue": 9},
+        )
+        rec = recommend(req)
+        assert rec.today_decision.recommended_intensity in (
+            "moderate",
+            "light",
+            "recovery",
+            "rest",
+        )
+        assert rec.today_decision.recommended_intensity != "hard"
+
+    def test_well_recovered_gets_real_session(self):
+        """Old: long rest -> MEDIUM. New: recovered athlete gets moderate/hard."""
+        req = _req(
+            wearable={
+                "readiness_score": 80,
+                "sleep_hours": 8,
+                "hrv": 60,
+                "resting_hr": 55,
+                "activity_score": 70,
+                "sleep_score": 85,
+            },
+            manual={"fatigue": 4},
+        )
+        rec = recommend(req)
+        assert rec.today_decision.recommended_intensity in ("moderate", "hard")
+        # Recovered day: there should be actual prescribed work, not an empty plan.
+        assert len(rec.exercise_prescription) >= 1
+
+    def test_rationale_rest_like_day_references_factor(self):
+        """why_today should name at least one triggering signal on a low-readiness day."""
+        req = _req(
+            wearable={
+                "readiness_score": 30,
+                "sleep_hours": 4,
+                "hrv": 40,
+                "resting_hr": 60,
+            },
+            manual={"fatigue": 3},
+        )
+        rec = recommend(req)
+        text = rec.today_decision.why_today.lower()
+        assert text
+        assert any(k in text for k in ("readiness", "sleep", "hrv", "fatigue"))
+
+    def test_rationale_light_day_references_factor(self):
+        """why_today on a mid-range day should still cite a concrete factor."""
+        req = _req(
+            wearable={
+                "readiness_score": 55,
+                "sleep_hours": 6.5,
+                "hrv": 45,
+                "resting_hr": 62,
+            },
+            manual={"fatigue": 5},
+        )
+        rec = recommend(req)
+        text = rec.today_decision.why_today.lower()
+        assert text
+        assert any(k in text for k in ("readiness", "sleep", "hrv", "fatigue", "range"))
+
+    def test_rationale_moderate_or_hard_day_non_empty(self):
+        """why_today is a non-empty string even when all signals are in range."""
+        req = _req(
+            wearable={
+                "readiness_score": 85,
+                "sleep_hours": 8.5,
+                "hrv": 65,
+                "resting_hr": 55,
+                "sleep_score": 90,
+                "activity_score": 80,
+            },
+            manual={"fatigue": 2},
+        )
+        rec = recommend(req)
+        assert rec.today_decision.why_today
+        # On a clean day, the string should at least reference the template goal
+        # or state that signals are in range.
+        text = rec.today_decision.why_today.lower()
+        assert (
+            "training" in text
+            or "range" in text
+            or "goal" in text
+            or "strength" in text
+        )
+
+
+class TestEmptyAllowedActionsLegacy:
+    """Port of the old 'empty allowed actions -> rest' edge case.
+
+    The new engine never returns 'no allowed actions' (it downshifts intensity
+    instead), so this scenario is retired at the engine level. We keep one
+    assertion that a sufficiently extreme profile still yields the most
+    conservative legacy action (REST) via the shim.
+    """
+
+    def test_extreme_profile_collapses_to_rest_via_shim(self):
         recommender = HybridRecommender(use_rl=False)
         state = {
-            "readiness_score": 70,
-            "sleep_duration_hours": 8,
-            "fatigue": 4,
-            "days_since_training": 1,
-            "hrv": 60,
-            "resting_hr": 55,
-            "soreness": 2,
-            "activity_score": 70,
+            "readiness_score": 10,
+            "sleep_duration_hours": 2,
+            "hrv": 12,
+            "resting_hr": 100,
+            "fatigue": 10,
+            "soreness": {"legs": 9, "upper_body": 9},
+            "pain": {"lower_back": 8, "left_knee": 8, "right_shoulder": 8},
+            "activity_score": 5,
         }
         result = recommender.recommend(state)
-        assert result is not None
-        assert isinstance(result, dict)
+        assert result["workout_type"] in ("REST", "RECOVERY")
+        assert result["intensity"] in ("NONE", "LOW")

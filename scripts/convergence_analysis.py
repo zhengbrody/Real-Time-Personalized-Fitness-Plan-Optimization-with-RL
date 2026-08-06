@@ -24,7 +24,7 @@ import json
 import argparse
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict
+from typing import Optional, Dict
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -185,61 +185,65 @@ def detect_convergence_plateau(
 
 
 def _run_fresh_benchmark(
-    n_episodes: int = 1000, seed: int = 42
+    n_episodes: int = 5000, seed: int = 42, users: int = 100
 ) -> Dict[str, np.ndarray]:
-    """Run a fresh benchmark and return per-strategy reward arrays."""
+    """Run a fresh benchmark and return per-policy reward arrays."""
+    from scripts.benchmark import POLICY_LABELS
+    from src.evaluation.policies import build_policy
+    from src.evaluation.runner import run_policy
+    from src.feature_store.transform import FEATURE_DIM
     from src.recommendation.action_space import ActionSpace
-    from scripts.benchmark import (
-        RandomAgent,
-        RuleAgent,
-        ThompsonAgent,
-        run_experiment,
-    )
 
-    # Seed the legacy global np.random state so that ContextualBandit
-    # (which uses np.random.beta / np.random.multivariate_normal) is
-    # deterministic across runs.
+    # The Beta-Bernoulli bandit samples from the legacy global RNG, so it has
+    # to be seeded separately for the run to be reproducible.
     np.random.seed(seed)
 
-    action_space = ActionSpace()
-    rng_random = np.random.default_rng(seed)
-    agents = [
-        RandomAgent(action_space, rng_random),
-        RuleAgent(action_space),
-        ThompsonAgent(action_space),
-    ]
-
-    results = {}
-    for agent in agents:
-        print(f"  Running {agent.name} ...", end="", flush=True)
-        res = run_experiment(agent, n_episodes, seed=seed + 1, action_space=action_space)
-        results[agent.name] = np.array([r.reward for r in res])
+    space = ActionSpace()
+    results: Dict[str, np.ndarray] = {}
+    for key in ("random", "rule_based", "beta_ts", "lin_ts", "neural_linear"):
+        policy = build_policy(key, space.get_action_count(), FEATURE_DIM, seed=seed)
+        print(f"  Running {POLICY_LABELS[key]} ...", end="", flush=True)
+        records = run_policy(
+            policy,
+            n_episodes=n_episodes,
+            n_users=users,
+            seed=seed,
+            action_space=space,
+            record_scores=False,
+        )
+        results[POLICY_LABELS[key]] = np.array([r.reward for r in records])
         print(" done")
     return results
 
 
 def _load_cached_results(path: Path) -> Optional[Dict[str, np.ndarray]]:
     """
-    Try to load cached multi-seed results.  Falls back to running fresh
-    if the file does not exist.
+    Load per-episode rewards from a cached multi-seed run, if available.
+
+    The aggregated results file stores scalar summaries per seed, not the
+    per-episode reward series these detectors need — carrying 10 seeds × 5
+    policies × 5,000 rewards would bloat it by two orders of magnitude for data
+    only this script consumes.  So the cache is used when it happens to carry
+    curves and is otherwise reported as unusable, rather than being silently
+    reinterpreted into something with the right shape and the wrong meaning.
     """
     if not path.exists():
         return None
     with open(path) as f:
         data = json.load(f)
 
-    out: Dict[str, np.ndarray] = {}
-    # Support the multi-seed format: {"seeds": {seed: {strategy: [rewards]}}}
+    # Legacy format: {"seeds": {seed: {policy: [per-episode rewards]}}}
     if "seeds" in data:
-        # Average across seeds
-        for seed_key, strategies in data["seeds"].items():
+        out: Dict[str, np.ndarray] = {}
+        for _, strategies in data["seeds"].items():
             for name, rewards in strategies.items():
-                if name not in out:
-                    out[name] = np.zeros(len(rewards))
-                out[name] += np.array(rewards)
+                arr = np.asarray(rewards, dtype=float)
+                out[name] = out.get(name, np.zeros_like(arr)) + arr
         for name in out:
             out[name] /= len(data["seeds"])
-    return out if out else None
+        return out or None
+
+    return None
 
 
 # ───────────────────────────────────────────────────────
@@ -289,17 +293,32 @@ def generate_plot(
     # ── Top panel: raw rewards + rolling mean + convergence markers ──
     ax = axes[0]
     ax.scatter(episodes, ts_rewards, alpha=0.08, s=3, color="gray", label="Raw rewards")
-    ax.plot(episodes, rm, color=default_color, linewidth=2, label=f"Rolling mean (w={window})")
+    ax.plot(
+        episodes,
+        rm,
+        color=default_color,
+        linewidth=2,
+        label=f"Rolling mean (w={window})",
+    )
 
-    markers = {"Rolling mean threshold": ("v", "#e74c3c"),
-               "Change-point (CUSUM)": ("D", "#3498db"),
-               "Plateau detection": ("s", "#9b59b6")}
+    markers = {
+        "Rolling mean threshold": ("v", "#e74c3c"),
+        "Change-point (CUSUM)": ("D", "#3498db"),
+        "Plateau detection": ("s", "#9b59b6"),
+    }
     for method_name, ep in convergence_points.items():
         marker, color = markers.get(method_name, ("o", "black"))
         if 0 < ep < len(rm):
             ax.axvline(x=ep, color=color, linestyle="--", alpha=0.6, linewidth=1)
-            ax.plot(ep, rm[ep], marker=marker, color=color, markersize=10,
-                    zorder=5, label=f"{method_name}: ep {ep}")
+            ax.plot(
+                ep,
+                rm[ep],
+                marker=marker,
+                color=color,
+                markersize=10,
+                zorder=5,
+                label=f"{method_name}: ep {ep}",
+            )
 
     ax.set_ylabel("Reward")
     ax.set_title("Rewards and Rolling Mean with Convergence Points")
@@ -308,8 +327,14 @@ def generate_plot(
 
     # ── Middle panel: rolling std + rolling mean slope ──
     ax = axes[1]
-    ax.plot(episodes, rstd, color="#8e44ad", linewidth=1.5, alpha=0.6,
-            label=f"Rolling std (w={window})")
+    ax.plot(
+        episodes,
+        rstd,
+        color="#8e44ad",
+        linewidth=1.5,
+        alpha=0.6,
+        label=f"Rolling std (w={window})",
+    )
 
     # Overlay rolling mean slope (used by plateau detection)
     slope_window = 100
@@ -322,16 +347,29 @@ def generate_plot(
         slopes[i] = np.sum((x - x_mean) * (y - y.mean())) / x_var
 
     ax2 = ax.twinx()
-    ax2.plot(episodes, np.abs(slopes), color="#2980b9", linewidth=1.2, alpha=0.7,
-             label="|Rolling mean slope|")
+    ax2.plot(
+        episodes,
+        np.abs(slopes),
+        color="#2980b9",
+        linewidth=1.2,
+        alpha=0.7,
+        label="|Rolling mean slope|",
+    )
     ax2.set_ylabel("|Slope of Rolling Mean|", color="#2980b9")
     ax2.tick_params(axis="y", labelcolor="#2980b9")
 
     plateau_ep = convergence_points.get("Plateau detection", None)
     if plateau_ep and 0 < plateau_ep < len(rstd):
         ax.axvline(x=plateau_ep, color="#9b59b6", linestyle="--", alpha=0.6)
-        ax.plot(plateau_ep, rstd[plateau_ep], "s", color="#9b59b6", markersize=10,
-                zorder=5, label=f"Plateau start: ep {plateau_ep}")
+        ax.plot(
+            plateau_ep,
+            rstd[plateau_ep],
+            "s",
+            color="#9b59b6",
+            markersize=10,
+            zorder=5,
+            label=f"Plateau start: ep {plateau_ep}",
+        )
 
     ax.set_ylabel("Rolling Std", color="#8e44ad")
     ax.tick_params(axis="y", labelcolor="#8e44ad")
@@ -363,9 +401,14 @@ def generate_plot(
             crossings = np.where(np.diff(np.sign(diff)))[0]
             if len(crossings) > 0:
                 divergence_ep = int(crossings[-1]) + 1
-                ax.axvline(x=divergence_ep, color="black", linestyle="--",
-                           alpha=0.5, linewidth=1,
-                           label=f"TS diverges at ep {divergence_ep}")
+                ax.axvline(
+                    x=divergence_ep,
+                    color="black",
+                    linestyle="--",
+                    alpha=0.5,
+                    linewidth=1,
+                    label=f"TS diverges at ep {divergence_ep}",
+                )
 
     ax.set_xlabel("Episode")
     ax.set_ylabel("Cumulative Reward")
@@ -392,7 +435,8 @@ def main():
         action="store_true",
         help="Load from benchmark_multi_seed_results.json instead of running fresh",
     )
-    parser.add_argument("--episodes", type=int, default=1000)
+    parser.add_argument("--episodes", type=int, default=5000)
+    parser.add_argument("--users", type=int, default=100)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--window", type=int, default=50)
     parser.add_argument("--no-plot", action="store_true")
@@ -406,19 +450,22 @@ def main():
         if results is not None:
             print(f"  Loaded cached results from {cached_path}")
         else:
-            print(f"  Cache file not found ({cached_path}), running fresh benchmark...")
+            print(
+                f"  No per-episode curves in {cached_path.name}; "
+                "running a fresh benchmark ..."
+            )
 
     if results is None:
-        results = _run_fresh_benchmark(args.episodes, args.seed)
+        results = _run_fresh_benchmark(args.episodes, args.seed, args.users)
 
-    # ── Identify Thompson Sampling rewards ──
-    ts_key = None
-    for k in results:
-        if "thompson" in k.lower() or "ts" in k.lower():
-            ts_key = k
-            break
+    # ── Analyse the deployed policy ──
+    # NeuralLinear is what the service actually runs, so it is the one whose
+    # convergence matters; fall back to any bandit row if it is absent.
+    ts_key = next(
+        (k for k in results if "neurallinear" in k.lower().replace(" ", "")), None
+    )
     if ts_key is None:
-        ts_key = list(results.keys())[-1]
+        ts_key = next((k for k in results if "ts" in k.lower()), list(results)[-1])
 
     ts_rewards = results[ts_key]
     window = args.window

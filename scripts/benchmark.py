@@ -1,583 +1,258 @@
 """
-ProFit AI - Benchmark Evaluation Script
-========================================
+ProFit AI — Benchmark Evaluation (single seed)
+==============================================
 
-Compares three strategies on a simulated fitness environment:
-  1. Random Baseline    - selects actions uniformly at random
-  2. Rule-based         - hand-crafted heuristics (the project's fallback)
-  3. Thompson Sampling  - this project's RL algorithm
+Compares five strategies on the simulated user population:
 
-All results are from a controlled simulation with fixed random seeds.
-They are clearly NOT from real users. This is the honest way to present
-portfolio metrics.
+  1. Random          — uniform over the safety-gated action set
+  2. Rule-based      — the hand-crafted heuristic the RL policy replaces
+  3. Beta TS         — context-free Thompson Sampling (the ablation control)
+  4. Linear TS       — Thompson Sampling on the raw feature vector
+  5. NeuralLinear    — Thompson Sampling on a learned representation (PyTorch)
 
-Usage:
-    python scripts/benchmark.py
+Rows 3-5 share the same posterior machinery and the same safety gate; they
+differ only in what they condition on.  So the gap between row 3 and row 4 is
+the value of using context at all, and the gap between row 4 and row 5 is the
+value of learning a representation rather than assuming linearity.
 
-Output:
-    - Console: per-strategy summary statistics
-    - scripts/benchmark_results.json: raw results for README
-    - scripts/benchmark_learning_curve.png (optional, if matplotlib available)
+All results come from simulation with fixed seeds — no real users are involved.
+See ``src/simulation/fitness_env.py`` for what the simulator does and does not
+model.
+
+Usage
+-----
+    python scripts/benchmark.py --episodes 5000 --users 100 --seed 42
+
+Output
+------
+    scripts/benchmark_results.json   raw metrics
+    docs/benchmark_single_seed.png   reward + regret curves (unless --no-plot)
 """
 
-import sys
-import json
-import time
-import argparse
-import numpy as np
-from pathlib import Path
-from dataclasses import dataclass
-from typing import List, Dict
+from __future__ import annotations
 
-# Add project root to path
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+from typing import Dict
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Import only the core ML components (no LLM/Kafka/dotenv dependency)
-from src.recommendation.action_space import ActionSpace, Action  # noqa: E402
-from src.recommendation.contextual_bandits import ContextualBandit  # noqa: E402
+from src.evaluation.policies import build_policy  # noqa: E402
+from src.evaluation.runner import (  # noqa: E402
+    compute_metrics,
+    convergence_episode,
+    pct_improvement,
+    run_policy,
+)
+from src.feature_store.transform import FEATURE_DIM  # noqa: E402
+from src.recommendation.action_space import ActionSpace  # noqa: E402
 
-# ──────────────────────────────────────────────
-# Minimal Rule-based recommender (inline, no import chain)
-# ──────────────────────────────────────────────
+POLICY_KEYS = ["random", "rule_based", "beta_ts", "lin_ts", "neural_linear"]
 
+POLICY_LABELS = {
+    "random": "Random",
+    "rule_based": "Rule-based",
+    "beta_ts": "Beta TS (no context)",
+    "lin_ts": "Linear TS",
+    "neural_linear": "NeuralLinear",
+}
 
-class _MinimalSafetyFilter:
-    """Safety filter reproduced inline to avoid heavy import chain."""
-
-    def filter_actions(self, state: Dict, action_space: ActionSpace) -> List[int]:
-        all_ids = list(range(action_space.get_action_count()))
-        r = state.get("readiness_score", 50)
-        f = state.get("fatigue", 5)
-
-        if r < 30 or f > 8:
-            # Critical: REST or RECOVERY only
-            return [
-                i
-                for i in all_ids
-                if action_space.get_action(i).workout_type in ("REST", "RECOVERY")
-            ]
-        if f > 6:
-            # Fatigued: max LOW intensity
-            return [
-                i
-                for i in all_ids
-                if action_space.get_action(i).intensity in ("NONE", "LOW")
-            ]
-        return all_ids  # all actions allowed
+POLICY_COLORS = {
+    "random": "#e74c3c",
+    "rule_based": "#f39c12",
+    "beta_ts": "#9b59b6",
+    "lin_ts": "#3498db",
+    "neural_linear": "#27ae60",
+}
 
 
-_SAFETY = _MinimalSafetyFilter()
+def run_all(
+    n_episodes: int, n_users: int, seed: int, verbose: bool = True
+) -> Dict[str, dict]:
+    """Run every policy and return ``{policy_key: metrics}``."""
+    space = ActionSpace()
+    results: Dict[str, dict] = {}
 
-
-def _rule_based_action(
-    state: Dict, allowed: List[int], action_space: ActionSpace
-) -> int:
-    r = state.get("readiness_score", 50)
-    f = state.get("fatigue", 5)
-    days = state.get("days_since_training", 1)
-    sleep_h = state.get("sleep_duration_hours", 7)
-
-    if r < 40 or sleep_h < 5:
-        return 0  # REST
-
-    if f >= 7:
-        rec = [
-            a for a in allowed if action_space.get_action(a).workout_type == "RECOVERY"
-        ]
-        if rec:
-            return rec[0]
-
-    if days >= 3:
-        med = [a for a in allowed if action_space.get_action(a).intensity == "MEDIUM"]
-        if med:
-            return med[0]
-
-    low = [a for a in allowed if action_space.get_action(a).intensity == "LOW"]
-    if low:
-        return low[0]
-
-    return allowed[0] if allowed else 0
-
-
-# ──────────────────────────────────────────────
-# Simulated User Environment
-# ──────────────────────────────────────────────
-
-
-def generate_body_state(rng: np.random.Generator, day: int) -> Dict:
-    """
-    Simulate realistic body state for a training day.
-
-    Uses a simple periodic model: readiness recovers after rest,
-    declines after hard training.  No real users involved.
-    """
-    week_phase = (day % 7) / 7.0
-    base_readiness = 60 + 20 * np.sin(2 * np.pi * week_phase + np.pi)
-
-    readiness = float(np.clip(rng.normal(base_readiness, 12), 20, 100))
-    sleep_score = float(np.clip(rng.normal(75, 10), 40, 100))
-    hrv = float(np.clip(rng.normal(50 + (readiness - 60) * 0.3, 8), 20, 100))
-    resting_hr = float(np.clip(rng.normal(62 - (readiness - 60) * 0.1, 5), 45, 90))
-    fatigue = float(np.clip(rng.normal(10 - readiness / 12, 1.5), 1, 10))
-    activity_score = float(np.clip(rng.normal(65, 15), 20, 100))
-    sleep_hours = float(np.clip(rng.normal(7.2, 0.8), 4, 10))
-    days_since = int(rng.integers(0, 3))
-
-    return dict(
-        readiness_score=round(readiness),
-        sleep_score=round(sleep_score),
-        hrv=round(hrv),
-        resting_hr=round(resting_hr),
-        fatigue=round(fatigue, 1),
-        activity_score=round(activity_score),
-        sleep_duration_hours=round(sleep_hours, 1),
-        days_since_training=days_since,
-    )
-
-
-def compute_optimal_action(state: Dict, action_space: ActionSpace) -> int:
-    """
-    Oracle: action that would yield highest expected reward for this state.
-
-    Ground-truth user preference in simulation:
-      readiness ≥ 70 & fatigue ≤ 4  → HIGH strength (action 8)
-      readiness 55-70 & fatigue ≤ 6 → MEDIUM cardio (action 13)
-      readiness 40-55               → LOW strength (action 4)
-      readiness 30-40               → RECOVERY (action 1)
-      readiness < 30                → REST (action 0)
-    """
-    r = state["readiness_score"]
-    f = state["fatigue"]
-    if r >= 70 and f <= 4:
-        return 8
-    elif r >= 55 and f <= 6:
-        return 13
-    elif r >= 40:
-        return 4
-    elif r >= 30:
-        return 1
-    else:
-        return 0
-
-
-def simulate_reward(state: Dict, action: Action, rng: np.random.Generator) -> float:
-    """
-    Reward a user would receive.
-
-    A mismatch (e.g. HIGH intensity when exhausted) gives negative reward.
-    """
-    r = state["readiness_score"]
-    f = state["fatigue"]
-    intensity_score = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3}
-    intensity_level = intensity_score.get(action.intensity, 0)
-
-    if r >= 70 and f <= 4:
-        ideal = 3
-    elif r >= 55 and f <= 6:
-        ideal = 2
-    elif r >= 40:
-        ideal = 1
-    else:
-        ideal = 0
-
-    mismatch = abs(intensity_level - ideal)
-    base = 0.8 - 0.25 * mismatch
-
-    overtraining = intensity_level == 3 and (f > 7 or r < 40)
-    if overtraining:
-        base -= 0.5
-
-    return float(np.clip(rng.normal(base, 0.1), -1.0, 1.0))
-
-
-# ──────────────────────────────────────────────
-# Agents
-# ──────────────────────────────────────────────
-
-
-class RandomAgent:
-    name = "Random Baseline"
-
-    def __init__(self, action_space: ActionSpace, rng: np.random.Generator):
-        self.action_space = action_space
-        self.rng = rng
-
-    def select_action(self, state: Dict) -> int:
-        allowed = _SAFETY.filter_actions(state, self.action_space)
-        return int(self.rng.choice(allowed))
-
-    def update(self, action_id, state, reward):
-        pass
-
-
-class RuleAgent:
-    name = "Rule-based Heuristic"
-
-    def __init__(self, action_space: ActionSpace):
-        self.action_space = action_space
-
-    def select_action(self, state: Dict) -> int:
-        allowed = _SAFETY.filter_actions(state, self.action_space)
-        return _rule_based_action(state, allowed, self.action_space)
-
-    def update(self, action_id, state, reward):
-        pass
-
-
-class ThompsonAgent:
-    name = "Thompson Sampling (ProFit AI)"
-
-    def __init__(self, action_space: ActionSpace):
-        self.action_space = action_space
-        self.bandit = ContextualBandit(action_space)
-
-    def select_action(self, state: Dict) -> int:
-        allowed = _SAFETY.filter_actions(state, self.action_space)
-        context = np.array(
-            [
-                state.get("readiness_score", 50) / 100.0,
-                state.get("sleep_score", 50) / 100.0,
-                state.get("activity_score", 50) / 100.0,
-                state.get("hrv", 50) / 100.0,
-                state.get("resting_hr", 60) / 100.0,
-                state.get("fatigue", 5) / 10.0,
-                state.get("days_since_training", 1) / 7.0,
-            ]
+    for key in POLICY_KEYS:
+        policy = build_policy(key, space.get_action_count(), FEATURE_DIM, seed=seed)
+        if verbose:
+            print(f"  {POLICY_LABELS[key]:<22}", end="", flush=True)
+        t0 = time.time()
+        records = run_policy(
+            policy,
+            n_episodes=n_episodes,
+            n_users=n_users,
+            seed=seed,
+            action_space=space,
         )
-        return self.bandit.select_action(context, allowed)
-
-    def update(self, action_id, state, reward):
-        self.bandit.update(action_id, reward)
-
-
-# ──────────────────────────────────────────────
-# Evaluation
-# ──────────────────────────────────────────────
-
-
-@dataclass
-class EpisodeResult:
-    episode: int
-    action_id: int
-    optimal_action_id: int
-    reward: float
-    is_optimal: bool
-    is_overtraining: bool
-
-
-def run_experiment(
-    agent, n_episodes: int, seed: int, action_space: ActionSpace
-) -> List[EpisodeResult]:
-    rng = np.random.default_rng(seed)
-    results = []
-    for ep in range(n_episodes):
-        state = generate_body_state(rng, ep)
-        action_id = agent.select_action(state)
-        action = action_space.get_action(action_id)
-        reward = simulate_reward(state, action, rng)
-        optimal = compute_optimal_action(state, action_space)
-        overtraining = action.intensity == "HIGH" and (
-            state["fatigue"] > 7 or state["readiness_score"] < 40
-        )
-        agent.update(action_id, state, reward)
-        results.append(
-            EpisodeResult(
-                episode=ep,
-                action_id=action_id,
-                optimal_action_id=optimal,
-                reward=reward,
-                is_optimal=(action_id == optimal),
-                is_overtraining=overtraining,
+        metrics = compute_metrics(records)
+        metrics["convergence_episode"] = convergence_episode(records)
+        results[key] = metrics
+        if verbose:
+            print(
+                f"reward {metrics['mean_reward']:.4f}  "
+                f"regret {metrics['cumulative_regret']:7.1f}  "
+                f"({time.time() - t0:.1f}s)"
             )
-        )
+
     return results
 
 
-def rolling_mean(values: List[float], window: int = 50) -> List[float]:
-    out = []
-    for i in range(len(values)):
-        start = max(0, i - window + 1)
-        out.append(float(np.mean(values[start : i + 1])))
-    return out
+def _print_table(results: Dict[str, dict]) -> None:
+    rule = results["rule_based"]
+
+    print()
+    print("=" * 96)
+    print("  RESULTS")
+    print("=" * 96)
+    header = (
+        f"  {'Policy':<22}{'Reward':>9}{'CumRegret':>11}{'FinalRegret':>13}"
+        f"{'Optimal%':>10}{'AUC':>8}{'Actions':>9}{'Overtrain%':>12}"
+    )
+    print(header)
+    print("  " + "-" * 92)
+    for key in POLICY_KEYS:
+        m = results[key]
+        print(
+            f"  {POLICY_LABELS[key]:<22}"
+            f"{m['mean_reward']:>9.4f}"
+            f"{m['cumulative_regret']:>11.1f}"
+            f"{m['final_regret_rate']:>13.4f}"
+            f"{m['optimal_action_rate'] * 100:>9.1f}%"
+            f"{m['mean_auc']:>8.3f}"
+            f"{m['actions_used']:>6d}/18"
+            f"{m['overtraining_rate'] * 100:>11.2f}%"
+        )
+
+    print()
+    print("  Improvement over the rule-based baseline")
+    print("  " + "-" * 92)
+    for key in ["beta_ts", "lin_ts", "neural_linear"]:
+        m = results[key]
+        d_reward = pct_improvement(m, rule)
+        d_cum = (
+            (m["cumulative_regret"] - rule["cumulative_regret"])
+            / rule["cumulative_regret"]
+            * 100
+        )
+        d_final = (
+            (m["final_regret_rate"] - rule["final_regret_rate"])
+            / rule["final_regret_rate"]
+            * 100
+        )
+        print(
+            f"  {POLICY_LABELS[key]:<22}"
+            f"reward {d_reward:+7.2f}%   "
+            f"cumulative regret {d_cum:+7.1f}%   "
+            f"final regret rate {d_final:+7.1f}%"
+        )
 
 
-def compute_metrics(results: List[EpisodeResult]) -> Dict:
-    rewards = [r.reward for r in results]
-    mid = len(rewards) // 2
-    return {
-        "mean_reward": float(np.mean(rewards)),
-        "std_reward": float(np.std(rewards)),
-        "cumulative_reward": float(np.sum(rewards)),
-        "optimal_action_rate": float(np.mean([r.is_optimal for r in results])),
-        "overtraining_rate": float(np.mean([r.is_overtraining for r in results])),
-        "first_half_mean_reward": float(np.mean(rewards[:mid])),
-        "second_half_mean_reward": float(np.mean(rewards[mid:])),
-        "learning_improvement": float(np.mean(rewards[mid:]) - np.mean(rewards[:mid])),
-        "rolling_rewards": rolling_mean(rewards, window=50),
-    }
+def _plot(results: Dict[str, dict], out_path: Path, n_episodes: int) -> bool:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    ax = axes[0]
+    for key in POLICY_KEYS:
+        ax.plot(
+            results[key]["rolling_rewards"],
+            label=POLICY_LABELS[key],
+            color=POLICY_COLORS[key],
+            linewidth=1.6,
+        )
+    ax.set_xlabel("Episode (interleaved user-days)")
+    ax.set_ylabel("Rolling mean reward (window=50)")
+    ax.set_title("Learning curves")
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+
+    ax = axes[1]
+    for key in POLICY_KEYS:
+        ax.plot(
+            results[key]["regret_curve"],
+            label=POLICY_LABELS[key],
+            color=POLICY_COLORS[key],
+            linewidth=1.6,
+        )
+    ax.set_xlabel("Episode")
+    ax.set_ylabel("Cumulative regret vs oracle")
+    ax.set_title("Cumulative regret (lower is better)")
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+
+    fig.suptitle(
+        f"ProFit AI benchmark — {n_episodes} episodes, simulated population",
+        fontsize=12,
+    )
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=140)
+    plt.close(fig)
+    return True
 
 
-def pct_improvement(a_metrics, b_metrics):
-    b = b_metrics["mean_reward"]
-    a = a_metrics["mean_reward"]
-    return (a - b) / max(abs(b), 1e-9) * 100
-
-
-def convergence_episode(results: List[EpisodeResult], window=50) -> int:
-    rewards = [r.reward for r in results]
-    rolling = rolling_mean(rewards, window)
-    target = float(np.percentile(rolling[-100:], 25))
-    for i, v in enumerate(rolling):
-        if v >= target and i > window:
-            return i
-    return len(results)
-
-
-# ──────────────────────────────────────────────
-# Main
-# ──────────────────────────────────────────────
-
-
-def main():
-    parser = argparse.ArgumentParser(description="ProFit AI Benchmark")
-    parser.add_argument("--episodes", type=int, default=1000)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="ProFit AI benchmark (single seed)")
+    parser.add_argument("--episodes", type=int, default=5000)
+    parser.add_argument("--users", type=int, default=100)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-plot", action="store_true")
     args = parser.parse_args()
 
-    N, SEED = args.episodes, args.seed
-    action_space = ActionSpace()
-
-    print("=" * 70)
+    print("=" * 96)
     print("  ProFit AI — Benchmark Evaluation")
-    print("=" * 70)
-    print(f"\n  Episodes : {N}  |  Seed: {SEED}")
-    print("  NOTE: Simulated environment — no real users\n")
-
-    rng_random = np.random.default_rng(SEED)
-    agents = [
-        RandomAgent(action_space, rng_random),
-        RuleAgent(action_space),
-        ThompsonAgent(action_space),
-    ]
-
-    all_metrics = {}
-    all_results = {}
-    for agent in agents:
-        print(f"  Running {agent.name} ...", end="", flush=True)
-        t0 = time.time()
-        results = run_experiment(agent, N, seed=SEED + 1, action_space=action_space)
-        metrics = compute_metrics(results)
-        all_results[agent.name] = results
-        all_metrics[agent.name] = metrics
-        print(f" done ({time.time()-t0:.1f}s)")
-
-    rand_m = all_metrics["Random Baseline"]
-    rule_m = all_metrics["Rule-based Heuristic"]
-    ts_m = all_metrics["Thompson Sampling (ProFit AI)"]
-
-    ts_vs_rand = pct_improvement(ts_m, rand_m)
-    ts_vs_rule = pct_improvement(ts_m, rule_m)
-    conv = convergence_episode(all_results["Thompson Sampling (ProFit AI)"])
-
-    print()
-    print("=" * 70)
-    print("  RESULTS")
-    print("=" * 70)
-    print(f"\n  {'Metric':<42} {'Random':>10} {'Rule':>10} {'TS (ours)':>12}")
-    print("  " + "-" * 68)
-
-    rows = [
-        (
-            "Mean Reward",
-            rand_m["mean_reward"],
-            rule_m["mean_reward"],
-            ts_m["mean_reward"],
-            ".4f",
-        ),
-        (
-            "Std Reward",
-            rand_m["std_reward"],
-            rule_m["std_reward"],
-            ts_m["std_reward"],
-            ".4f",
-        ),
-        (
-            "Cumulative Reward",
-            rand_m["cumulative_reward"],
-            rule_m["cumulative_reward"],
-            ts_m["cumulative_reward"],
-            ".1f",
-        ),
-        (
-            "Optimal Action Rate",
-            rand_m["optimal_action_rate"],
-            rule_m["optimal_action_rate"],
-            ts_m["optimal_action_rate"],
-            ".4f",
-        ),
-        (
-            "Overtraining Rate",
-            rand_m["overtraining_rate"],
-            rule_m["overtraining_rate"],
-            ts_m["overtraining_rate"],
-            ".4f",
-        ),
-        (
-            "Early Mean (ep 0-499)",
-            rand_m["first_half_mean_reward"],
-            rule_m["first_half_mean_reward"],
-            ts_m["first_half_mean_reward"],
-            ".4f",
-        ),
-        (
-            "Late Mean  (ep 500-999)",
-            rand_m["second_half_mean_reward"],
-            rule_m["second_half_mean_reward"],
-            ts_m["second_half_mean_reward"],
-            ".4f",
-        ),
-    ]
-
-    for label, rv, rulev, tsv, fmt in rows:
-        print(f"  {label:<42} {rv:>{10}{fmt}} {rulev:>{10}{fmt}} {tsv:>{12}{fmt}}")
-
-    print()
-    print("  KEY FINDINGS")
-    print("  " + "-" * 68)
-    print(f"  Thompson Sampling vs Random:   {ts_vs_rand:+.1f}% mean reward")
-    print(f"  Thompson Sampling vs Rules:    {ts_vs_rule:+.1f}% mean reward")
+    print("=" * 96)
     print(
-        f"  TS within-run improvement:    {ts_m['learning_improvement']:+.4f} reward (early → late)"
+        f"\n  Episodes: {args.episodes}   Users: {args.users}   "
+        f"Seed: {args.seed}   Features: {FEATURE_DIM}"
     )
-    print(
-        f"  Overtraining rate: TS {ts_m['overtraining_rate']:.1%}  vs  Rule {rule_m['overtraining_rate']:.1%}  vs  Random {rand_m['overtraining_rate']:.1%}"
-    )
-    print(f"  Convergence approx episode:   ~{conv}")
+    print("  NOTE: simulated population — no real users\n")
 
-    # Save results
-    output = {
+    results = run_all(args.episodes, args.users, args.seed)
+    _print_table(results)
+
+    out_dir = Path(__file__).parent
+    payload = {
         "config": {
-            "n_episodes": N,
-            "seed": SEED,
-            "note": (
-                "Simulated environment. Synthetic body-state data generated with "
-                "weekly periodicity + Gaussian noise. Reward encodes domain knowledge: "
-                "high-readiness states reward high-intensity; fatigue/low-readiness reward rest."
-            ),
+            "episodes": args.episodes,
+            "users": args.users,
+            "seed": args.seed,
+            "feature_dim": FEATURE_DIM,
+            "note": "Simulated population. See src/simulation/fitness_env.py.",
         },
-        "metrics": {
-            name: {k: v for k, v in m.items() if k != "rolling_rewards"}
-            for name, m in all_metrics.items()
+        "results": {
+            key: {
+                k: v
+                for k, v in m.items()
+                # Curves are large; keep the JSON readable.
+                if k not in ("rolling_rewards", "regret_curve", "action_distribution")
+            }
+            for key, m in results.items()
         },
-        "summary": {
-            "ts_improvement_vs_random_pct": round(ts_vs_rand, 2),
-            "ts_improvement_vs_rule_pct": round(ts_vs_rule, 2),
-            "ts_within_run_learning": round(ts_m["learning_improvement"], 4),
-            "convergence_episode": conv,
-            "ts_overtraining_rate": round(ts_m["overtraining_rate"], 4),
-            "rule_overtraining_rate": round(rule_m["overtraining_rate"], 4),
+        "action_distribution": {
+            key: m["action_distribution"] for key, m in results.items()
         },
     }
+    json_path = out_dir / "benchmark_results.json"
+    json_path.write_text(json.dumps(payload, indent=2))
+    print(f"\n  Raw results  -> {json_path}")
 
-    out_path = Path(__file__).parent / "benchmark_results.json"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w") as f:
-        json.dump(output, f, indent=2)
-    print(f"\n  Results saved → {out_path}")
-
-    # Optional plot
     if not args.no_plot:
-        try:
-            import matplotlib
-
-            matplotlib.use("Agg")
-            import matplotlib.pyplot as plt
-
-            colors = {
-                "Random Baseline": "#e74c3c",
-                "Rule-based Heuristic": "#f39c12",
-                "Thompson Sampling (ProFit AI)": "#27ae60",
-            }
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-            fig.suptitle(
-                "ProFit AI — Simulated Benchmark  (synthetic data, no real users)",
-                fontsize=12,
-            )
-
-            for name, metrics in all_metrics.items():
-                ax1.plot(
-                    metrics["rolling_rewards"],
-                    label=name,
-                    color=colors[name],
-                    linewidth=1.8,
-                )
-            ax1.axvline(
-                x=500, color="gray", linestyle="--", alpha=0.5, label="Midpoint"
-            )
-            ax1.set_xlabel("Episode")
-            ax1.set_ylabel("Rolling Mean Reward (window=50)")
-            ax1.set_title("Learning Curves")
-            ax1.legend(fontsize=9)
-            ax1.grid(True, alpha=0.3)
-
-            short = ["Random", "Rule-based", "Thompson\nSampling"]
-            means = [all_metrics[n]["mean_reward"] for n in [a.name for a in agents]]
-            stds = [all_metrics[n]["std_reward"] for n in [a.name for a in agents]]
-            bars = ax2.bar(
-                short,
-                means,
-                yerr=stds,
-                capsize=5,
-                color=[colors[a.name] for a in agents],
-                edgecolor="black",
-                linewidth=0.8,
-            )
-            ax2.set_ylabel("Mean Reward ± Std")
-            ax2.set_title("Final Performance")
-            ax2.grid(True, axis="y", alpha=0.3)
-            for bar, v in zip(bars, means):
-                ax2.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + 0.005,
-                    f"{v:.3f}",
-                    ha="center",
-                    va="bottom",
-                    fontsize=9,
-                )
-
-            plt.tight_layout()
-            plot_path = Path(__file__).parent / "benchmark_learning_curve.png"
-            plt.savefig(plot_path, dpi=150, bbox_inches="tight")
-            print(f"  Plot saved    → {plot_path}")
-
-        except ImportError:
-            print("  (matplotlib not available — skipping plot)")
-
-    print()
-    print("=" * 70)
-    print("  INTERPRETATION FOR README")
-    print("=" * 70)
-    print(f"""
-  Honest claims you can make in portfolio/README:
-
-  Simulation environment (N={N}, seed={SEED}, synthetic data):
-
-    • Thompson Sampling achieves {ts_vs_rand:+.1f}% higher mean reward than
-      random selection ({ts_m['mean_reward']:.3f} vs {rand_m['mean_reward']:.3f}).
-
-    • Compared to fixed rule-based heuristics, TS achieves
-      {ts_vs_rule:+.1f}% reward difference, {'demonstrating online adaptation' if ts_vs_rule > 0 else 'showing rules are competitive'}.
-
-    • Within-run learning: TS reward improves {ts_m['learning_improvement']:+.4f}
-      from first 500 to last 500 episodes (convergence ~ep {conv}).
-
-    • Overtraining rate: TS {ts_m['overtraining_rate']:.1%}, vs Rule {rule_m['overtraining_rate']:.1%},
-      vs Random {rand_m['overtraining_rate']:.1%}.
-
-  DO NOT claim 0.85 AUC or "15% improvement" without a source.
-  These simulation numbers are traceable and reproducible.
-""")
+        plot_path = out_dir.parent / "docs" / "benchmark_single_seed.png"
+        if _plot(results, plot_path, args.episodes):
+            print(f"  Plot         -> {plot_path}")
+        else:
+            print("  Plot         -> skipped (matplotlib not installed)")
 
 
 if __name__ == "__main__":

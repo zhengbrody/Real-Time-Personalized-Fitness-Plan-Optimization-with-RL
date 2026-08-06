@@ -1,0 +1,26 @@
+{
+  "config": {
+    "events": 2000,
+    "users": 100,
+    "seed": 7,
+    "broker": "localhost:9092",
+    "topic": "training.user.feedback.1785825520"
+  },
+  "results": {
+    "produced": 2000,
+    "consumed": 2000,
+    "posterior_updates_applied": 2000,
+    "feature_mismatches": 0,
+    "loop_latency_ms": {
+      "p50": 7.260680198669434,
+      "p95": 9.477293491363525,
+      "p99": 16.70655012130736,
+      "mean": 6.9412407875061035
+    },
+    "throughput_events_per_s": 199.95210840985573,
+    "reward_first_quarter": 0.7104685041250429,
+    "reward_last_quarter": 0.7174275997015002,
+    "loop_closed": true,
+    "features_consistent": true
+  }
+}

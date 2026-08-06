@@ -56,7 +56,6 @@ class TestContextualBandit:
         action_0_count = selections.count(0)
         assert action_0_count > 50  # Should be selected more often
 
-
     def test_get_action_probabilities_default_allowed(self):
         """Test get_action_probabilities with default (all) allowed_actions (lines 104-122)."""
         action_space = ActionSpace()
@@ -192,7 +191,9 @@ class TestLinearContextualBandit:
         """Test get_expected_reward returns a float (lines 230-231)."""
         action_space = ActionSpace()
         feature_dim = 4
-        bandit = LinearContextualBandit(action_space=action_space, feature_dim=feature_dim)
+        bandit = LinearContextualBandit(
+            action_space=action_space, feature_dim=feature_dim
+        )
         rng = np.random.default_rng(42)
         context = rng.standard_normal(feature_dim)
 
@@ -205,7 +206,9 @@ class TestLinearContextualBandit:
         """Test get_expected_reward changes after updates (lines 230-231)."""
         action_space = ActionSpace()
         feature_dim = 3
-        bandit = LinearContextualBandit(action_space=action_space, feature_dim=feature_dim)
+        bandit = LinearContextualBandit(
+            action_space=action_space, feature_dim=feature_dim
+        )
 
         context = np.array([1.0, 0.5, -0.5])
 
@@ -234,7 +237,9 @@ class TestLinearContextualBandit:
         """Test that update actually modifies B and f matrices."""
         action_space = ActionSpace()
         feature_dim = 3
-        bandit = LinearContextualBandit(action_space=action_space, feature_dim=feature_dim)
+        bandit = LinearContextualBandit(
+            action_space=action_space, feature_dim=feature_dim
+        )
 
         B_before = bandit.B[0].copy()
         f_before = bandit.f[0].copy()

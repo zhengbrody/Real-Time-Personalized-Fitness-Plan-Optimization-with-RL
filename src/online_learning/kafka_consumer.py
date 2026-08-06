@@ -83,7 +83,9 @@ class FeedbackConsumer:
             )
             raise
         except Exception as e:
-            logger.error("Failed to connect to Kafka at %s: %s", self.bootstrap_servers, e)
+            logger.error(
+                "Failed to connect to Kafka at %s: %s", self.bootstrap_servers, e
+            )
             raise
 
     def _process_message(self, message) -> None:
@@ -134,8 +136,9 @@ class FeedbackConsumer:
         Start consuming messages in a loop until a shutdown signal is received
         or an unrecoverable error occurs.
         """
-        global _shutdown
-
+        # No `global _shutdown` here: this loop only *reads* the flag, and a
+        # bare read of a module-level name needs no declaration. Only
+        # `_handle_signal`, which assigns it, declares it global.
         self._connect()
 
         logger.info("Consumer loop started. Waiting for messages...")

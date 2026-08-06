@@ -136,9 +136,7 @@ class CoachMemory:
 
     def get_active_injuries(self) -> List[Dict]:
         """Return injuries where resolved_date is None."""
-        return [
-            i for i in self.data["injury_record"] if i["resolved_date"] is None
-        ]
+        return [i for i in self.data["injury_record"] if i["resolved_date"] is None]
 
     # -------------------------------------------------------- Preferences
 
@@ -188,19 +186,13 @@ class CoachMemory:
         if recent:
             summaries = [s["summary"] for s in recent if s.get("summary")]
             if summaries:
-                parts.append(
-                    "Recent session notes: " + " | ".join(summaries)
-                )
+                parts.append("Recent session notes: " + " | ".join(summaries))
 
         # --- Active injuries
         active = self.get_active_injuries()
         if active:
-            injury_strs = [
-                f"{i['body_part']} ({i['severity']})" for i in active
-            ]
-            parts.append(
-                "Active injuries: " + ", ".join(injury_strs) + "."
-            )
+            injury_strs = [f"{i['body_part']} ({i['severity']})" for i in active]
+            parts.append("Active injuries: " + ", ".join(injury_strs) + ".")
 
         # --- Preferences
         prefs = self.data["preferences"]
@@ -210,9 +202,7 @@ class CoachMemory:
                 "preferred workouts: " + ", ".join(prefs["preferred_workout_types"])
             )
         if prefs.get("avoided_exercises"):
-            pref_parts.append(
-                "avoids: " + ", ".join(prefs["avoided_exercises"])
-            )
+            pref_parts.append("avoids: " + ", ".join(prefs["avoided_exercises"]))
         if prefs.get("goal"):
             pref_parts.append(f"goal: {prefs['goal']}")
         if pref_parts:
@@ -230,9 +220,7 @@ class CoachMemory:
         compliance = session.get("compliance_rate", 0.0)
         # Running average
         n = stats["total_sessions"]
-        stats["avg_compliance"] = (
-            (stats["avg_compliance"] * (n - 1) + compliance) / n
-        )
+        stats["avg_compliance"] = (stats["avg_compliance"] * (n - 1) + compliance) / n
 
         # Streak logic: compliance >= 0.5 counts as a completed workout
         if compliance >= 0.5:

@@ -81,7 +81,11 @@ class TestSafetyGate:
 
         with patch.dict(
             "sys.modules",
-            {"src.recommendation.action_space": MagicMock(ActionSpace=mock_action_space_cls)},
+            {
+                "src.recommendation.action_space": MagicMock(
+                    ActionSpace=mock_action_space_cls
+                )
+            },
         ):
             filtered = gate.filter_actions(state, all_action_ids)
 
@@ -110,7 +114,11 @@ class TestSafetyGate:
 
         with patch.dict(
             "sys.modules",
-            {"src.recommendation.action_space": MagicMock(ActionSpace=mock_action_space_cls)},
+            {
+                "src.recommendation.action_space": MagicMock(
+                    ActionSpace=mock_action_space_cls
+                )
+            },
         ):
             filtered = gate.filter_actions(state, all_action_ids)
 
@@ -142,7 +150,11 @@ class TestSafetyGate:
 
         with patch.dict(
             "sys.modules",
-            {"src.recommendation.action_space": MagicMock(ActionSpace=mock_action_space_cls)},
+            {
+                "src.recommendation.action_space": MagicMock(
+                    ActionSpace=mock_action_space_cls
+                )
+            },
         ):
             filtered = gate.filter_actions(state, all_action_ids)
 

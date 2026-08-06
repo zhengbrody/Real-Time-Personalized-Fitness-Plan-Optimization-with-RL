@@ -1,370 +1,288 @@
 """
-ProFit AI - Multi-Seed Benchmark Evaluation
-============================================
+ProFit AI — Multi-Seed Benchmark
+================================
 
-Runs the benchmark across multiple random seeds and aggregates results
-with mean, std, and 95% confidence intervals.
+Runs the full policy comparison across independent seeds and reports mean ± std
+with 95% confidence intervals.
 
-Reuses all simulation logic from benchmark.py.
+A single seed proves nothing about a stochastic policy: Thompson Sampling's
+early exploration is random, and on a short horizon that alone can move mean
+reward by several percent.  Every number quoted in the README comes from this
+script, across 10 seeds, so the reported effect is separable from seed noise.
 
-Usage:
-    python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 1000
+Each seed constructs a fresh simulator, so the user population differs between
+seeds as well as the exploration draws — the variation being measured is over
+*populations and runs*, not just over random draws for one fixed population.
 
-Output:
-    - scripts/benchmark_multi_seed_results.json
-    - docs/learning_curves.png
-    - docs/convergence_analysis.png
+Usage
+-----
+    python scripts/benchmark_multi_seed.py --num_seeds 10 --episodes 5000
+
+Output
+------
+    scripts/benchmark_multi_seed_results.json
+    docs/learning_curves.png
+    docs/regret_curves.png
 """
 
-import sys
-import json
-import time
-import argparse
-import numpy as np
-from pathlib import Path
+from __future__ import annotations
 
-# Add project root to path
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+from typing import Dict, List
+
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Reuse everything from the existing benchmark
 from scripts.benchmark import (  # noqa: E402
-    ActionSpace,
-    RandomAgent,
-    RuleAgent,
-    ThompsonAgent,
-    run_experiment,
-    compute_metrics,
-    convergence_episode,
-    rolling_mean,
-    pct_improvement,
+    POLICY_COLORS,
+    POLICY_KEYS,
+    POLICY_LABELS,
+    run_all,
 )
+from src.feature_store.transform import FEATURE_DIM  # noqa: E402
 
-# ──────────────────────────────────────────────
-# Agent key mapping (short keys for JSON output)
-# ──────────────────────────────────────────────
-
-AGENT_KEYS = {
-    "Random Baseline": "random",
-    "Rule-based Heuristic": "rule_based",
-    "Thompson Sampling (ProFit AI)": "thompson",
-}
-
-AGENT_COLORS = {
-    "random": "#e74c3c",
-    "rule_based": "#f39c12",
-    "thompson": "#27ae60",
-}
-
-AGENT_LABELS = {
-    "random": "Random Baseline",
-    "rule_based": "Rule-based Heuristic",
-    "thompson": "Thompson Sampling",
-}
+SCALAR_METRICS = [
+    "mean_reward",
+    "std_reward",
+    "cumulative_reward",
+    "cumulative_regret",
+    "mean_regret",
+    "final_regret_rate",
+    "optimal_action_rate",
+    "overtraining_rate",
+    "mean_auc",
+    "actions_used",
+    "actions_used_above_1pct",
+    "learning_improvement",
+    "convergence_episode",
+]
 
 
-def run_single_seed(seed: int, n_episodes: int):
+def aggregate(per_seed: Dict[str, Dict[str, dict]]) -> Dict[str, dict]:
     """
-    Run all three agents for a single seed.
-    Returns (metrics_dict, rolling_rewards_dict, convergence_dict).
+    Collapse ``{seed_label: {policy: metrics}}`` into
+    ``{policy: {metric: {mean, std, ci_95}}}``.
+
+    The CI is a normal approximation, which is adequate at n=10 for the effect
+    sizes involved here; it is reported so the reader can see the spread, not
+    to support a formal hypothesis test (that lives in the A/B framework).
     """
-    action_space = ActionSpace()
-
-    rng_random = np.random.default_rng(seed)
-    agents = [
-        RandomAgent(action_space, rng_random),
-        RuleAgent(action_space),
-        ThompsonAgent(action_space),
-    ]
-
-    seed_metrics = {}
-    seed_rolling = {}
-    seed_convergence = {}
-
-    for agent in agents:
-        key = AGENT_KEYS[agent.name]
-        results = run_experiment(agent, n_episodes, seed=seed + 1, action_space=action_space)
-        metrics = compute_metrics(results)
-        conv_ep = convergence_episode(results)
-
-        seed_metrics[key] = {
-            "mean_reward": metrics["mean_reward"],
-            "std_reward": metrics["std_reward"],
-            "cumulative_reward": metrics["cumulative_reward"],
-            "optimal_action_rate": metrics["optimal_action_rate"],
-            "overtraining_rate": metrics["overtraining_rate"],
-            "convergence_episode": conv_ep,
-        }
-        seed_rolling[key] = metrics["rolling_rewards"]
-        seed_convergence[key] = conv_ep
-
-    return seed_metrics, seed_rolling, seed_convergence
-
-
-def aggregate_across_seeds(per_seed_data: dict, metric_names: list):
-    """
-    Aggregate a metric across seeds: mean, std, 95% CI.
-    per_seed_data: {agent_key: [list of values, one per seed]}
-    Returns: {agent_key: {metric: {mean, std, ci_95}}}
-    """
-    aggregated = {}
-    for agent_key in ["random", "rule_based", "thompson"]:
-        aggregated[agent_key] = {}
-        for metric in metric_names:
-            values = [per_seed_data[seed_label][agent_key][metric]
-                      for seed_label in per_seed_data]
-            arr = np.array(values)
-            mean = float(np.mean(arr))
-            std = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
-            n = len(arr)
-            # 95% CI using t-distribution approximation (for n>=10, z~1.96 is fine)
-            ci_half = 1.96 * std / np.sqrt(n) if n > 1 else 0.0
-            aggregated[agent_key][metric] = {
+    out: Dict[str, dict] = {}
+    for policy in POLICY_KEYS:
+        out[policy] = {}
+        for metric in SCALAR_METRICS:
+            values = np.array(
+                [per_seed[s][policy][metric] for s in per_seed], dtype=float
+            )
+            n = len(values)
+            mean = float(np.mean(values))
+            std = float(np.std(values, ddof=1)) if n > 1 else 0.0
+            half = 1.96 * std / np.sqrt(n) if n > 1 else 0.0
+            out[policy][metric] = {
                 "mean": round(mean, 6),
                 "std": round(std, 6),
-                "ci_95": [round(mean - ci_half, 6), round(mean + ci_half, 6)],
+                "ci_95": [round(mean - half, 6), round(mean + half, 6)],
             }
-    return aggregated
+    return out
 
 
-def generate_learning_curves(all_rolling: dict, all_convergence: dict,
-                             n_episodes: int, output_path: Path):
+def relative_to_baseline(
+    per_seed: Dict[str, Dict[str, dict]], baseline: str = "rule_based"
+) -> Dict[str, dict]:
     """
-    Generate publication-quality learning curves with confidence bands.
-    all_rolling: {seed_label: {agent_key: [rolling_reward_per_episode]}}
-    all_convergence: {seed_label: {agent_key: convergence_episode}}
+    Per-seed relative improvements, aggregated.
+
+    Computing the ratio *within* each seed and then averaging — rather than
+    taking the ratio of the averages — keeps the baseline's own seed-to-seed
+    variation from leaking into the reported effect.
     """
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+    out: Dict[str, dict] = {}
+    for policy in POLICY_KEYS:
+        if policy == baseline:
+            continue
+        reward_lift, cum_regret, final_regret = [], [], []
+        for s in per_seed:
+            b = per_seed[s][baseline]
+            p = per_seed[s][policy]
+            reward_lift.append(
+                (p["mean_reward"] - b["mean_reward"]) / abs(b["mean_reward"]) * 100
+            )
+            cum_regret.append(
+                (p["cumulative_regret"] - b["cumulative_regret"])
+                / b["cumulative_regret"]
+                * 100
+            )
+            final_regret.append(
+                (p["final_regret_rate"] - b["final_regret_rate"])
+                / b["final_regret_rate"]
+                * 100
+            )
+        out[policy] = {
+            "reward_lift_pct": {
+                "mean": round(float(np.mean(reward_lift)), 4),
+                "std": round(float(np.std(reward_lift, ddof=1)), 4),
+            },
+            "cumulative_regret_change_pct": {
+                "mean": round(float(np.mean(cum_regret)), 4),
+                "std": round(float(np.std(cum_regret, ddof=1)), 4),
+            },
+            "final_regret_change_pct": {
+                "mean": round(float(np.mean(final_regret)), 4),
+                "std": round(float(np.std(final_regret, ddof=1)), 4),
+            },
+        }
+    return out
 
-    fig, ax = plt.subplots(figsize=(10, 5.5))
 
-    episodes = np.arange(n_episodes)
+def _plot_bands(
+    curves: Dict[str, List[List[float]]],
+    ylabel: str,
+    title: str,
+    out_path: Path,
+) -> bool:
+    try:
+        import matplotlib
 
-    for agent_key in ["random", "rule_based", "thompson"]:
-        # Collect rolling rewards across all seeds
-        all_curves = []
-        for seed_label in all_rolling:
-            curve = all_rolling[seed_label][agent_key]
-            all_curves.append(curve)
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
 
-        all_curves = np.array(all_curves)  # shape: (num_seeds, n_episodes)
-        mean_curve = np.mean(all_curves, axis=0)
-        std_curve = np.std(all_curves, axis=0)
+    fig, ax = plt.subplots(figsize=(11, 6))
+    for key in POLICY_KEYS:
+        arr = np.array(curves[key], dtype=float)
+        mean = arr.mean(axis=0)
+        std = arr.std(axis=0)
+        x = np.arange(len(mean))
+        ax.plot(
+            x, mean, label=POLICY_LABELS[key], color=POLICY_COLORS[key], linewidth=1.8
+        )
+        ax.fill_between(x, mean - std, mean + std, color=POLICY_COLORS[key], alpha=0.15)
 
-        color = AGENT_COLORS[agent_key]
-        label = AGENT_LABELS[agent_key]
-
-        ax.plot(episodes, mean_curve, label=label, color=color, linewidth=2.0)
-        ax.fill_between(episodes, mean_curve - std_curve, mean_curve + std_curve,
-                        color=color, alpha=0.15)
-
-    # Mark Thompson convergence point (mean across seeds)
-    ts_conv_episodes = [all_convergence[s]["thompson"] for s in all_convergence]
-    mean_conv = int(np.mean(ts_conv_episodes))
-    ax.axvline(x=mean_conv, color="#27ae60", linestyle="--", linewidth=1.2, alpha=0.7)
-    ax.annotate(f"TS converges ~ep {mean_conv}",
-                xy=(mean_conv, ax.get_ylim()[0]),
-                xytext=(mean_conv + 40, 0.15),
-                fontsize=9, color="#27ae60",
-                arrowprops=dict(arrowstyle="->", color="#27ae60", lw=1.0))
-
-    ax.set_xlabel("Episode", fontsize=11)
-    ax.set_ylabel("Rolling Mean Reward (window=50)", fontsize=11)
-    ax.set_title("Learning Curves Across Seeds (mean +/- 1 std)", fontsize=12, pad=10)
-    ax.legend(fontsize=10, loc="lower right")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(labelsize=10)
-
-    plt.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    ax.set_xlabel("Episode (interleaved user-days)")
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.legend(fontsize=10)
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=140)
     plt.close(fig)
+    return True
 
 
-def generate_convergence_analysis(all_convergence: dict, output_path: Path):
-    """
-    Scatter plot of per-seed convergence episodes + mean bar.
-    all_convergence: {seed_label: {agent_key: convergence_episode}}
-    """
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    ts_convs = [all_convergence[s]["thompson"] for s in sorted(all_convergence)]
-    seeds = list(range(1, len(ts_convs) + 1))
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    mean_conv = float(np.mean(ts_convs))
-    std_conv = float(np.std(ts_convs, ddof=1)) if len(ts_convs) > 1 else 0.0
-
-    # Scatter for each seed
-    ax.scatter(seeds, ts_convs, color="#27ae60", s=70, zorder=5,
-               edgecolors="white", linewidths=1.2, label="Per-seed convergence")
-
-    # Mean bar
-    ax.axhline(y=mean_conv, color="#27ae60", linewidth=2.0, linestyle="-",
-               alpha=0.8, label=f"Mean = {mean_conv:.0f}")
-    # Std band
-    ax.axhspan(mean_conv - std_conv, mean_conv + std_conv,
-               color="#27ae60", alpha=0.1, label=f"+/- 1 std ({std_conv:.0f})")
-
-    ax.set_xlabel("Seed", fontsize=11)
-    ax.set_ylabel("Convergence Episode", fontsize=11)
-    ax.set_title("Thompson Sampling Convergence Analysis", fontsize=12, pad=10)
-    ax.set_xticks(seeds)
-    ax.legend(fontsize=9, loc="upper right")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(labelsize=10)
-
-    plt.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-
-
-def print_summary_table(aggregated: dict, summary: dict, num_seeds: int, n_episodes: int):
-    """Print a clean summary table to stdout."""
-    print()
-    print("=" * 74)
-    print("  ProFit AI - Multi-Seed Benchmark Results")
-    print("=" * 74)
-    print(f"\n  Seeds: {num_seeds}  |  Episodes per seed: {n_episodes}")
-    print("  NOTE: Simulated environment - no real users\n")
-
-    metrics_to_show = [
-        ("Mean Reward", "mean_reward", ".4f"),
-        ("Std Reward", "std_reward", ".4f"),
-        ("Cumulative Reward", "cumulative_reward", ".1f"),
-        ("Optimal Action Rate", "optimal_action_rate", ".4f"),
-        ("Overtraining Rate", "overtraining_rate", ".4f"),
-        ("Convergence Episode", "convergence_episode", ".0f"),
-    ]
-
-    header = f"  {'Metric':<30} {'Random':>14} {'Rule-based':>14} {'Thompson':>14}"
-    print(header)
-    print("  " + "-" * 72)
-
-    for label, key, fmt in metrics_to_show:
-        vals = []
-        for agent_key in ["random", "rule_based", "thompson"]:
-            m = aggregated[agent_key][key]["mean"]
-            s = aggregated[agent_key][key]["std"]
-            vals.append(f"{m:{fmt}} +/-{s:{fmt}}")
-        print(f"  {label:<30} {vals[0]:>14} {vals[1]:>14} {vals[2]:>14}")
-
-    print()
-    print("  KEY FINDINGS (across seeds)")
-    print("  " + "-" * 72)
-    ts_vs_rand = summary["ts_vs_random_pct"]
-    ts_vs_rule = summary["ts_vs_rule_pct"]
-    print(f"  TS vs Random:  {ts_vs_rand['mean']:+.1f}% +/- {ts_vs_rand['std']:.1f}% mean reward")
-    print(f"  TS vs Rule:    {ts_vs_rule['mean']:+.1f}% +/- {ts_vs_rule['std']:.1f}% mean reward")
-    print()
-
-
-def main():
-    parser = argparse.ArgumentParser(description="ProFit AI Multi-Seed Benchmark")
-    parser.add_argument("--num_seeds", type=int, default=10,
-                        help="Number of seeds to run (seeds 1..N)")
-    parser.add_argument("--episodes", type=int, default=1000,
-                        help="Episodes per seed")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="ProFit AI multi-seed benchmark")
+    parser.add_argument("--num_seeds", type=int, default=10)
+    parser.add_argument("--episodes", type=int, default=5000)
+    parser.add_argument("--users", type=int, default=100)
+    parser.add_argument("--no-plot", action="store_true")
     args = parser.parse_args()
 
-    num_seeds = args.num_seeds
-    n_episodes = args.episodes
-    seeds = list(range(1, num_seeds + 1))
+    seeds = list(range(1, args.num_seeds + 1))
 
-    project_root = Path(__file__).parent.parent
-    docs_dir = project_root / "docs"
-    docs_dir.mkdir(parents=True, exist_ok=True)
+    print("=" * 96)
+    print("  ProFit AI — Multi-Seed Benchmark")
+    print("=" * 96)
+    print(
+        f"\n  Seeds: {seeds}\n  Episodes/seed: {args.episodes}   "
+        f"Users: {args.users}   Features: {FEATURE_DIM}\n"
+    )
 
-    print("=" * 74)
-    print("  ProFit AI - Multi-Seed Benchmark")
-    print("=" * 74)
-    print(f"\n  Running {num_seeds} seeds x {n_episodes} episodes each ...\n")
+    per_seed: Dict[str, Dict[str, dict]] = {}
+    reward_curves: Dict[str, List[List[float]]] = {k: [] for k in POLICY_KEYS}
+    regret_curves: Dict[str, List[List[float]]] = {k: [] for k in POLICY_KEYS}
 
-    # Collect per-seed results
-    per_seed = {}          # {seed_label: {agent_key: {metric: value}}}
-    all_rolling = {}       # {seed_label: {agent_key: [rolling_rewards]}}
-    all_convergence = {}   # {seed_label: {agent_key: conv_episode}}
-
+    t_start = time.time()
     for seed in seeds:
-        label = f"seed_{seed}"
-        t0 = time.time()
-        metrics, rolling, convergence = run_single_seed(seed, n_episodes)
-        elapsed = time.time() - t0
-        per_seed[label] = metrics
-        all_rolling[label] = rolling
-        all_convergence[label] = convergence
-        print(f"    Seed {seed:>2}/{num_seeds} done ({elapsed:.1f}s)")
+        print(f"  --- seed {seed} ---")
+        results = run_all(args.episodes, args.users, seed)
+        per_seed[f"seed_{seed}"] = {
+            k: {m: v[m] for m in SCALAR_METRICS} for k, v in results.items()
+        }
+        for k in POLICY_KEYS:
+            reward_curves[k].append(results[k]["rolling_rewards"])
+            regret_curves[k].append(results[k]["regret_curve"])
 
-    # Aggregate across seeds
-    metric_names = [
-        "mean_reward", "std_reward", "cumulative_reward",
-        "optimal_action_rate", "overtraining_rate", "convergence_episode",
-    ]
-    aggregated = aggregate_across_seeds(per_seed, metric_names)
+    aggregated = aggregate(per_seed)
+    relative = relative_to_baseline(per_seed)
 
-    # Compute TS improvement percentages per seed, then aggregate
-    ts_vs_random_pcts = []
-    ts_vs_rule_pcts = []
-    for label in per_seed:
-        ts_mean = per_seed[label]["thompson"]["mean_reward"]
-        rand_mean = per_seed[label]["random"]["mean_reward"]
-        rule_mean = per_seed[label]["rule_based"]["mean_reward"]
-        ts_vs_random_pcts.append((ts_mean - rand_mean) / max(abs(rand_mean), 1e-9) * 100)
-        ts_vs_rule_pcts.append((ts_mean - rule_mean) / max(abs(rule_mean), 1e-9) * 100)
+    print()
+    print("=" * 96)
+    print("  AGGREGATED ACROSS SEEDS  (mean ± std)")
+    print("=" * 96)
+    print(
+        f"  {'Policy':<22}{'Reward':>16}{'CumRegret':>16}"
+        f"{'FinalRegret':>16}{'AUC':>14}{'Actions':>10}"
+    )
+    print("  " + "-" * 92)
+    for key in POLICY_KEYS:
+        a = aggregated[key]
+        print(
+            f"  {POLICY_LABELS[key]:<22}"
+            f"{a['mean_reward']['mean']:>9.4f} ±{a['mean_reward']['std']:<5.4f}"
+            f"{a['cumulative_regret']['mean']:>9.1f} ±{a['cumulative_regret']['std']:<5.1f}"
+            f"{a['final_regret_rate']['mean']:>9.4f} ±{a['final_regret_rate']['std']:<5.4f}"
+            f"{a['mean_auc']['mean']:>8.3f} ±{a['mean_auc']['std']:<4.3f}"
+            f"{a['actions_used']['mean']:>7.1f}/18"
+        )
 
-    summary = {
-        "ts_vs_random_pct": {
-            "mean": round(float(np.mean(ts_vs_random_pcts)), 2),
-            "std": round(float(np.std(ts_vs_random_pcts, ddof=1)), 2) if num_seeds > 1 else 0.0,
-        },
-        "ts_vs_rule_pct": {
-            "mean": round(float(np.mean(ts_vs_rule_pcts)), 2),
-            "std": round(float(np.std(ts_vs_rule_pcts, ddof=1)), 2) if num_seeds > 1 else 0.0,
-        },
-    }
+    print()
+    print("  vs rule-based baseline (per-seed ratios, then averaged)")
+    print("  " + "-" * 92)
+    for key, r in relative.items():
+        print(
+            f"  {POLICY_LABELS[key]:<22}"
+            f"reward {r['reward_lift_pct']['mean']:+7.2f}% ± {r['reward_lift_pct']['std']:.2f}   "
+            f"cum regret {r['cumulative_regret_change_pct']['mean']:+7.2f}% ± "
+            f"{r['cumulative_regret_change_pct']['std']:.2f}   "
+            f"final regret {r['final_regret_change_pct']['mean']:+7.2f}%"
+        )
 
-    # Print summary table
-    print_summary_table(aggregated, summary, num_seeds, n_episodes)
-
-    # Build JSON output
-    output = {
+    payload = {
         "config": {
-            "num_seeds": num_seeds,
-            "episodes_per_seed": n_episodes,
+            "num_seeds": args.num_seeds,
             "seeds": seeds,
-        },
-        "per_seed": {
-            label: per_seed[label] for label in sorted(per_seed)
+            "episodes_per_seed": args.episodes,
+            "users": args.users,
+            "feature_dim": FEATURE_DIM,
+            "note": "Simulated population. See src/simulation/fitness_env.py.",
         },
         "aggregated": aggregated,
-        "summary": summary,
+        "relative_to_rule_based": relative,
+        "per_seed": per_seed,
     }
+    out_path = Path(__file__).parent / "benchmark_multi_seed_results.json"
+    out_path.write_text(json.dumps(payload, indent=2))
+    print(f"\n  Raw results -> {out_path}")
 
-    json_path = Path(__file__).parent / "benchmark_multi_seed_results.json"
-    with open(json_path, "w") as f:
-        json.dump(output, f, indent=2)
-    print(f"  Results saved -> {json_path}")
+    if not args.no_plot:
+        docs = Path(__file__).parent.parent / "docs"
+        ok1 = _plot_bands(
+            reward_curves,
+            "Rolling mean reward (window=50)",
+            f"Learning curves — mean ± 1 std across {args.num_seeds} seeds",
+            docs / "learning_curves.png",
+        )
+        ok2 = _plot_bands(
+            regret_curves,
+            "Cumulative regret vs oracle",
+            f"Cumulative regret — mean ± 1 std across {args.num_seeds} seeds",
+            docs / "regret_curves.png",
+        )
+        if ok1 and ok2:
+            print(
+                f"  Plots       -> {docs}/learning_curves.png, {docs}/regret_curves.png"
+            )
+        else:
+            print("  Plots       -> skipped (matplotlib not installed)")
 
-    # Generate plots
-    try:
-        lc_path = docs_dir / "learning_curves.png"
-        generate_learning_curves(all_rolling, all_convergence, n_episodes, lc_path)
-        print(f"  Plot saved    -> {lc_path}")
-
-        ca_path = docs_dir / "convergence_analysis.png"
-        generate_convergence_analysis(all_convergence, ca_path)
-        print(f"  Plot saved    -> {ca_path}")
-    except ImportError:
-        print("  (matplotlib not available - skipping plots)")
-
-    print()
-    print("  Done.")
-    print()
+    print(f"\n  Total time: {time.time() - t_start:.1f}s")
 
 
 if __name__ == "__main__":
