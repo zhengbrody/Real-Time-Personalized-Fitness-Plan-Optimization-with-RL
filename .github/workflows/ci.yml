@@ -173,8 +173,12 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     services:
+      # apache/kafka starts a single-node KRaft broker with no configuration.
+      # confluentinc/cp-kafka, used here previously, requires KAFKA_* env vars
+      # (a ZooKeeper address or a full KRaft setup) and exits immediately
+      # without them, so the broker was never actually up.
       kafka:
-        image: confluentinc/cp-kafka:7.5.0
+        image: apache/kafka:3.9.0
         ports:
           - 9092:9092
 
@@ -182,6 +186,11 @@ jobs:
         image: redis:7-alpine
         ports:
           - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
 
     steps:
     - uses: actions/checkout@v4
@@ -198,8 +207,11 @@ jobs:
         pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+    # The guard checks for real test files, not just any .py: an empty package
+    # with only __init__.py used to satisfy hashFiles(), so pytest ran, found
+    # nothing, and exited 5 -- failing this job on every push to main.
     - name: Run integration tests
-      if: hashFiles('tests/integration/*.py') != ''
+      if: hashFiles('tests/integration/test_*.py') != ''
       run: |
         pytest tests/integration/ -v
       env:
