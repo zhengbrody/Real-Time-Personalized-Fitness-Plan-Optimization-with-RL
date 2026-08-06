@@ -1,0 +1,130 @@
+{
+  "config": {
+    "replications": 1,
+    "log_size": 800,
+    "train_episodes": 800,
+    "users": 30,
+    "mc_samples": 200,
+    "epsilons": [
+      0.6
+    ],
+    "feature_dim": 34,
+    "note": "Ground truth available only because the environment is simulated. See src/simulation/fitness_env.py."
+  },
+  "summary": {
+    "eps=0.6": {
+      "_truth": {
+        "target_value_mean": 0.5986498667050245,
+        "target_value_std": 0.0,
+        "behaviour_value_mean": 0.4858962129683886,
+        "true_lift_pct_mean": 23.205295848636602
+      },
+      "IPS": {
+        "bias": 0.007384866176380012,
+        "abs_bias": 0.007384866176380012,
+        "std": 0.0,
+        "rmse": 0.007384866176380012,
+        "ci_coverage": 1.0,
+        "mean_ess_fraction": 0.2785556370732708
+      },
+      "SNIPS": {
+        "bias": -0.0037754073484217443,
+        "abs_bias": 0.0037754073484217443,
+        "std": 0.0,
+        "rmse": 0.0037754073484217443,
+        "ci_coverage": 1.0,
+        "mean_ess_fraction": 0.2785556370732708
+      },
+      "CIPS(M=10)": {
+        "bias": 0.004952054127982497,
+        "abs_bias": 0.004952054127982497,
+        "std": 0.0,
+        "rmse": 0.004952054127982497,
+        "ci_coverage": 1.0,
+        "mean_ess_fraction": 0.2785556370732708
+      },
+      "DM": {
+        "bias": -0.06313444911919563,
+        "abs_bias": 0.06313444911919563,
+        "std": 0.0,
+        "rmse": 0.06313444911919563,
+        "ci_coverage": 0.0,
+        "mean_ess_fraction": NaN
+      },
+      "DR": {
+        "bias": 0.007600639761567107,
+        "abs_bias": 0.007600639761567107,
+        "std": 0.0,
+        "rmse": 0.007600639761567107,
+        "ci_coverage": 1.0,
+        "mean_ess_fraction": 0.2785556370732708
+      }
+    }
+  },
+  "replications_detail": {
+    "eps=0.6": [
+      {
+        "_truth": {
+          "target_value": 0.5986498667050245,
+          "behaviour_value": 0.4858962129683886,
+          "true_lift_pct": 23.205295848636602
+        },
+        "IPS": {
+          "value": 0.6060347328814045,
+          "error": 0.007384866176380012,
+          "abs_error": 0.007384866176380012,
+          "std_error": 0.04083738841618713,
+          "ci_low": 0.5262241601928619,
+          "ci_high": 0.690503037480731,
+          "covers_truth": true,
+          "ess_fraction": 0.2785556370732708,
+          "max_weight": 12.45
+        },
+        "SNIPS": {
+          "value": 0.5948744593566028,
+          "error": -0.0037754073484217443,
+          "abs_error": 0.0037754073484217443,
+          "std_error": 0.015508866314353283,
+          "ci_low": 0.5631181477939708,
+          "ci_high": 0.6254246852097446,
+          "covers_truth": true,
+          "ess_fraction": 0.2785556370732708,
+          "max_weight": 12.45
+        },
+        "CIPS(M=10)": {
+          "value": 0.603601920833007,
+          "error": 0.004952054127982497,
+          "abs_error": 0.004952054127982497,
+          "std_error": 0.04022792534928756,
+          "ci_low": 0.5250918841098683,
+          "ci_high": 0.6854206371999068,
+          "covers_truth": true,
+          "ess_fraction": 0.2785556370732708,
+          "max_weight": 12.45
+        },
+        "DM": {
+          "value": 0.5355154175858289,
+          "error": -0.06313444911919563,
+          "abs_error": 0.06313444911919563,
+          "std_error": 0.003102043320073535,
+          "ci_low": 0.5290513918499987,
+          "ci_high": 0.541705237923668,
+          "covers_truth": false,
+          "ess_fraction": NaN,
+          "max_weight": NaN
+        },
+        "DR": {
+          "value": 0.6062505064665916,
+          "error": 0.007600639761567107,
+          "abs_error": 0.007600639761567107,
+          "std_error": 0.020083934906969622,
+          "ci_low": 0.5661774348278455,
+          "ci_high": 0.6491683425985587,
+          "covers_truth": true,
+          "ess_fraction": 0.2785556370732708,
+          "max_weight": 12.45
+        }
+      }
+    ]
+  }
+}

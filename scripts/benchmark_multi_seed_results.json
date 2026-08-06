@@ -1,0 +1,1383 @@
+{
+  "config": {
+    "num_seeds": 10,
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes_per_seed": 5000,
+    "users": 100,
+    "feature_dim": 34,
+    "note": "Simulated population. See src/simulation/fitness_env.py."
+  },
+  "aggregated": {
+    "random": {
+      "mean_reward": {
+        "mean": 0.460447,
+        "std": 0.006936,
+        "ci_95": [
+          0.456149,
+          0.464746
+        ]
+      },
+      "std_reward": {
+        "mean": 0.357235,
+        "std": 0.006983,
+        "ci_95": [
+          0.352906,
+          0.361563
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 2302.237352,
+        "std": 34.678695,
+        "ci_95": [
+          2280.743274,
+          2323.73143
+        ]
+      },
+      "cumulative_regret": {
+        "mean": 1602.656518,
+        "std": 38.739472,
+        "ci_95": [
+          1578.645545,
+          1626.667491
+        ]
+      },
+      "mean_regret": {
+        "mean": 0.320531,
+        "std": 0.007748,
+        "ci_95": [
+          0.315729,
+          0.325333
+        ]
+      },
+      "final_regret_rate": {
+        "mean": 0.315082,
+        "std": 0.0102,
+        "ci_95": [
+          0.30876,
+          0.321404
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.06146,
+        "std": 0.003794,
+        "ci_95": [
+          0.059109,
+          0.063811
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.02782,
+        "std": 0.002723,
+        "ci_95": [
+          0.026132,
+          0.029508
+        ]
+      },
+      "mean_auc": {
+        "mean": 0.5,
+        "std": 0.0,
+        "ci_95": [
+          0.5,
+          0.5
+        ]
+      },
+      "actions_used": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "actions_used_above_1pct": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "learning_improvement": {
+        "mean": 0.010292,
+        "std": 0.008012,
+        "ci_95": [
+          0.005326,
+          0.015258
+        ]
+      },
+      "convergence_episode": {
+        "mean": 70.3,
+        "std": 28.063618,
+        "ci_95": [
+          52.905989,
+          87.694011
+        ]
+      }
+    },
+    "rule_based": {
+      "mean_reward": {
+        "mean": 0.501277,
+        "std": 0.018269,
+        "ci_95": [
+          0.489954,
+          0.5126
+        ]
+      },
+      "std_reward": {
+        "mean": 0.217639,
+        "std": 0.00938,
+        "ci_95": [
+          0.211825,
+          0.223452
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 2506.384428,
+        "std": 91.344739,
+        "ci_95": [
+          2449.768372,
+          2563.000484
+        ]
+      },
+      "cumulative_regret": {
+        "mean": 1399.100762,
+        "std": 101.146757,
+        "ci_95": [
+          1336.409352,
+          1461.792172
+        ]
+      },
+      "mean_regret": {
+        "mean": 0.27982,
+        "std": 0.020229,
+        "ci_95": [
+          0.267282,
+          0.292358
+        ]
+      },
+      "final_regret_rate": {
+        "mean": 0.277197,
+        "std": 0.020917,
+        "ci_95": [
+          0.264232,
+          0.290161
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.01928,
+        "std": 0.003942,
+        "ci_95": [
+          0.016837,
+          0.021723
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.0,
+        "std": 0.0,
+        "ci_95": [
+          0.0,
+          0.0
+        ]
+      },
+      "mean_auc": {
+        "mean": 0.480132,
+        "std": 0.002139,
+        "ci_95": [
+          0.478806,
+          0.481457
+        ]
+      },
+      "actions_used": {
+        "mean": 3.0,
+        "std": 0.0,
+        "ci_95": [
+          3.0,
+          3.0
+        ]
+      },
+      "actions_used_above_1pct": {
+        "mean": 3.0,
+        "std": 0.0,
+        "ci_95": [
+          3.0,
+          3.0
+        ]
+      },
+      "learning_improvement": {
+        "mean": 0.001917,
+        "std": 0.009314,
+        "ci_95": [
+          -0.003855,
+          0.00769
+        ]
+      },
+      "convergence_episode": {
+        "mean": 59.0,
+        "std": 14.936904,
+        "ci_95": [
+          49.742011,
+          68.257989
+        ]
+      }
+    },
+    "beta_ts": {
+      "mean_reward": {
+        "mean": 0.626022,
+        "std": 0.00977,
+        "ci_95": [
+          0.619966,
+          0.632077
+        ]
+      },
+      "std_reward": {
+        "mean": 0.201914,
+        "std": 0.006621,
+        "ci_95": [
+          0.19781,
+          0.206017
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 3130.10808,
+        "std": 48.85002,
+        "ci_95": [
+          3099.830524,
+          3160.385636
+        ]
+      },
+      "cumulative_regret": {
+        "mean": 764.456849,
+        "std": 49.485116,
+        "ci_95": [
+          733.785657,
+          795.128042
+        ]
+      },
+      "mean_regret": {
+        "mean": 0.152891,
+        "std": 0.009897,
+        "ci_95": [
+          0.146757,
+          0.159026
+        ]
+      },
+      "final_regret_rate": {
+        "mean": 0.140895,
+        "std": 0.009716,
+        "ci_95": [
+          0.134872,
+          0.146917
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.12986,
+        "std": 0.021094,
+        "ci_95": [
+          0.116786,
+          0.142934
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.00072,
+        "std": 0.000215,
+        "ci_95": [
+          0.000587,
+          0.000853
+        ]
+      },
+      "mean_auc": {
+        "mean": 0.667993,
+        "std": 0.020427,
+        "ci_95": [
+          0.655332,
+          0.680654
+        ]
+      },
+      "actions_used": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "actions_used_above_1pct": {
+        "mean": 8.5,
+        "std": 1.433721,
+        "ci_95": [
+          7.611371,
+          9.388629
+        ]
+      },
+      "learning_improvement": {
+        "mean": 0.012583,
+        "std": 0.008277,
+        "ci_95": [
+          0.007453,
+          0.017713
+        ]
+      },
+      "convergence_episode": {
+        "mean": 113.9,
+        "std": 46.378755,
+        "ci_95": [
+          85.15415,
+          142.64585
+        ]
+      }
+    },
+    "lin_ts": {
+      "mean_reward": {
+        "mean": 0.627927,
+        "std": 0.004706,
+        "ci_95": [
+          0.62501,
+          0.630844
+        ]
+      },
+      "std_reward": {
+        "mean": 0.231727,
+        "std": 0.003237,
+        "ci_95": [
+          0.229721,
+          0.233734
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 3139.636064,
+        "std": 23.529507,
+        "ci_95": [
+          3125.052324,
+          3154.219803
+        ]
+      },
+      "cumulative_regret": {
+        "mean": 753.991381,
+        "std": 18.082767,
+        "ci_95": [
+          742.783566,
+          765.199197
+        ]
+      },
+      "mean_regret": {
+        "mean": 0.150798,
+        "std": 0.003617,
+        "ci_95": [
+          0.148557,
+          0.15304
+        ]
+      },
+      "final_regret_rate": {
+        "mean": 0.094438,
+        "std": 0.004301,
+        "ci_95": [
+          0.091772,
+          0.097103
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.1403,
+        "std": 0.010789,
+        "ci_95": [
+          0.133613,
+          0.146987
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.00506,
+        "std": 0.000994,
+        "ci_95": [
+          0.004444,
+          0.005676
+        ]
+      },
+      "mean_auc": {
+        "mean": 0.782207,
+        "std": 0.012062,
+        "ci_95": [
+          0.774731,
+          0.789683
+        ]
+      },
+      "actions_used": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "actions_used_above_1pct": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "learning_improvement": {
+        "mean": 0.0866,
+        "std": 0.006771,
+        "ci_95": [
+          0.082403,
+          0.090796
+        ]
+      },
+      "convergence_episode": {
+        "mean": 1533.8,
+        "std": 431.413645,
+        "ci_95": [
+          1266.407052,
+          1801.192948
+        ]
+      }
+    },
+    "neural_linear": {
+      "mean_reward": {
+        "mean": 0.660463,
+        "std": 0.003511,
+        "ci_95": [
+          0.658287,
+          0.662639
+        ]
+      },
+      "std_reward": {
+        "mean": 0.203379,
+        "std": 0.005223,
+        "ci_95": [
+          0.200142,
+          0.206616
+        ]
+      },
+      "cumulative_reward": {
+        "mean": 3302.312829,
+        "std": 17.554224,
+        "ci_95": [
+          3291.432609,
+          3313.19305
+        ]
+      },
+      "cumulative_regret": {
+        "mean": 588.120943,
+        "std": 20.997682,
+        "ci_95": [
+          575.106445,
+          601.135441
+        ]
+      },
+      "mean_regret": {
+        "mean": 0.117624,
+        "std": 0.0042,
+        "ci_95": [
+          0.115021,
+          0.120227
+        ]
+      },
+      "final_regret_rate": {
+        "mean": 0.075654,
+        "std": 0.005362,
+        "ci_95": [
+          0.07233,
+          0.078977
+        ]
+      },
+      "optimal_action_rate": {
+        "mean": 0.16704,
+        "std": 0.010895,
+        "ci_95": [
+          0.160287,
+          0.173793
+        ]
+      },
+      "overtraining_rate": {
+        "mean": 0.0023,
+        "std": 0.000707,
+        "ci_95": [
+          0.001862,
+          0.002738
+        ]
+      },
+      "mean_auc": {
+        "mean": 0.77765,
+        "std": 0.008313,
+        "ci_95": [
+          0.772498,
+          0.782803
+        ]
+      },
+      "actions_used": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "actions_used_above_1pct": {
+        "mean": 18.0,
+        "std": 0.0,
+        "ci_95": [
+          18.0,
+          18.0
+        ]
+      },
+      "learning_improvement": {
+        "mean": 0.070399,
+        "std": 0.009161,
+        "ci_95": [
+          0.064721,
+          0.076076
+        ]
+      },
+      "convergence_episode": {
+        "mean": 1390.1,
+        "std": 322.143671,
+        "ci_95": [
+          1190.433284,
+          1589.766716
+        ]
+      }
+    }
+  },
+  "relative_to_rule_based": {
+    "random": {
+      "reward_lift_pct": {
+        "mean": -8.0476,
+        "std": 3.2457
+      },
+      "cumulative_regret_change_pct": {
+        "mean": 14.9958,
+        "std": 7.3536
+      },
+      "final_regret_change_pct": {
+        "mean": 14.1583,
+        "std": 8.1087
+      }
+    },
+    "beta_ts": {
+      "reward_lift_pct": {
+        "mean": 25.0506,
+        "std": 5.3793
+      },
+      "cumulative_regret_change_pct": {
+        "mean": -45.0877,
+        "std": 5.5725
+      },
+      "final_regret_change_pct": {
+        "mean": -48.8979,
+        "std": 5.4396
+      }
+    },
+    "lin_ts": {
+      "reward_lift_pct": {
+        "mean": 25.4197,
+        "std": 4.7921
+      },
+      "cumulative_regret_change_pct": {
+        "mean": -45.8727,
+        "std": 3.8737
+      },
+      "final_regret_change_pct": {
+        "mean": -65.7436,
+        "std": 3.1918
+      }
+    },
+    "neural_linear": {
+      "reward_lift_pct": {
+        "mean": 31.9109,
+        "std": 4.7843
+      },
+      "cumulative_regret_change_pct": {
+        "mean": -57.8221,
+        "std": 2.5165
+      },
+      "final_regret_change_pct": {
+        "mean": -72.6614,
+        "std": 1.5617
+      }
+    }
+  },
+  "per_seed": {
+    "seed_1": {
+      "random": {
+        "mean_reward": 0.45734483266545795,
+        "std_reward": 0.3536111954645754,
+        "cumulative_reward": 2286.7241633272897,
+        "cumulative_regret": 1649.4175217338648,
+        "mean_regret": 0.32988350434677294,
+        "final_regret_rate": 0.31786749553421145,
+        "optimal_action_rate": 0.0572,
+        "overtraining_rate": 0.0278,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.016448802088838643,
+        "convergence_episode": 102
+      },
+      "rule_based": {
+        "mean_reward": 0.4698054172974707,
+        "std_reward": 0.22962159538691218,
+        "cumulative_reward": 2349.0270864873537,
+        "cumulative_regret": 1589.8722989098378,
+        "mean_regret": 0.3179744597819676,
+        "final_regret_rate": 0.3183422140587487,
+        "optimal_action_rate": 0.014,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.47719362745098043,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": -0.008350434634416981,
+        "convergence_episode": 93
+      },
+      "beta_ts": {
+        "mean_reward": 0.6351003998117216,
+        "std_reward": 0.21084163399666278,
+        "cumulative_reward": 3175.501999058608,
+        "cumulative_regret": 745.0635844907412,
+        "mean_regret": 0.14901271689814824,
+        "final_regret_rate": 0.13721671045861256,
+        "optimal_action_rate": 0.1556,
+        "overtraining_rate": 0.0008,
+        "mean_auc": 0.6885998599439775,
+        "actions_used": 18,
+        "actions_used_above_1pct": 7,
+        "learning_improvement": 0.0021402290865888407,
+        "convergence_episode": 110
+      },
+      "lin_ts": {
+        "mean_reward": 0.6273292573623936,
+        "std_reward": 0.23712754895129276,
+        "cumulative_reward": 3136.6462868119684,
+        "cumulative_regret": 786.3309671383588,
+        "mean_regret": 0.15726619342767176,
+        "final_regret_rate": 0.0973965889867118,
+        "optimal_action_rate": 0.1374,
+        "overtraining_rate": 0.0054,
+        "mean_auc": 0.7774131652661065,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.08273866373924832,
+        "convergence_episode": 1393
+      },
+      "neural_linear": {
+        "mean_reward": 0.6626044820888226,
+        "std_reward": 0.21017732331979427,
+        "cumulative_reward": 3313.022410444113,
+        "cumulative_regret": 606.2478276448362,
+        "mean_regret": 0.12124956552896723,
+        "final_regret_rate": 0.08213104056686385,
+        "optimal_action_rate": 0.1648,
+        "overtraining_rate": 0.0026,
+        "mean_auc": 0.7887042016806723,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.06265882535381717,
+        "convergence_episode": 1494
+      }
+    },
+    "seed_2": {
+      "random": {
+        "mean_reward": 0.4500720813063747,
+        "std_reward": 0.3577427592799193,
+        "cumulative_reward": 2250.3604065318737,
+        "cumulative_regret": 1634.59361471578,
+        "mean_regret": 0.326918722943156,
+        "final_regret_rate": 0.32996531482373337,
+        "optimal_action_rate": 0.0626,
+        "overtraining_rate": 0.027,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.022522227154084085,
+        "convergence_episode": 69
+      },
+      "rule_based": {
+        "mean_reward": 0.4795123153401956,
+        "std_reward": 0.2255487228487006,
+        "cumulative_reward": 2397.561576700978,
+        "cumulative_regret": 1486.7688955961123,
+        "mean_regret": 0.29735377911922245,
+        "final_regret_rate": 0.28867044817817716,
+        "optimal_action_rate": 0.0254,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4835303921568628,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.020456630324379887,
+        "convergence_episode": 79
+      },
+      "beta_ts": {
+        "mean_reward": 0.6148676028163806,
+        "std_reward": 0.20981034506153814,
+        "cumulative_reward": 3074.338014081903,
+        "cumulative_regret": 800.374960590515,
+        "mean_regret": 0.160074992118103,
+        "final_regret_rate": 0.1507818436606235,
+        "optimal_action_rate": 0.1422,
+        "overtraining_rate": 0.001,
+        "mean_auc": 0.6497603641456582,
+        "actions_used": 18,
+        "actions_used_above_1pct": 8,
+        "learning_improvement": 0.016405969927172026,
+        "convergence_episode": 108
+      },
+      "lin_ts": {
+        "mean_reward": 0.6260556757028385,
+        "std_reward": 0.2306173576288772,
+        "cumulative_reward": 3130.2783785141924,
+        "cumulative_regret": 740.4675610340563,
+        "mean_regret": 0.14809351220681127,
+        "final_regret_rate": 0.08892976329888407,
+        "optimal_action_rate": 0.1596,
+        "overtraining_rate": 0.0046,
+        "mean_auc": 0.8027735294117647,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.100304483184402,
+        "convergence_episode": 2135
+      },
+      "neural_linear": {
+        "mean_reward": 0.6578909786264451,
+        "std_reward": 0.2037889527504167,
+        "cumulative_reward": 3289.454893132225,
+        "cumulative_regret": 579.9689634957607,
+        "mean_regret": 0.11599379269915214,
+        "final_regret_rate": 0.07518346753734388,
+        "optimal_action_rate": 0.1922,
+        "overtraining_rate": 0.0012,
+        "mean_auc": 0.7801260504201681,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.0817591262438423,
+        "convergence_episode": 1485
+      }
+    },
+    "seed_3": {
+      "random": {
+        "mean_reward": 0.47307366972701687,
+        "std_reward": 0.3464344357487528,
+        "cumulative_reward": 2365.368348635084,
+        "cumulative_regret": 1540.9746348134308,
+        "mean_regret": 0.3081949269626862,
+        "final_regret_rate": 0.314101344751432,
+        "optimal_action_rate": 0.0646,
+        "overtraining_rate": 0.0236,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.005117906984658027,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.4954544973624212,
+        "std_reward": 0.22563694385813082,
+        "cumulative_reward": 2477.272486812106,
+        "cumulative_regret": 1433.8131338716325,
+        "mean_regret": 0.2867626267743265,
+        "final_regret_rate": 0.2784091618710178,
+        "optimal_action_rate": 0.0134,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4769470588235294,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.006036996946853945,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.6422999385070816,
+        "std_reward": 0.20049083033580406,
+        "cumulative_reward": 3211.499692535408,
+        "cumulative_regret": 684.2868496944375,
+        "mean_regret": 0.1368573699388875,
+        "final_regret_rate": 0.13007461137480147,
+        "optimal_action_rate": 0.1454,
+        "overtraining_rate": 0.0006,
+        "mean_auc": 0.6716473389355743,
+        "actions_used": 18,
+        "actions_used_above_1pct": 8,
+        "learning_improvement": 0.014972026573084829,
+        "convergence_episode": 127
+      },
+      "lin_ts": {
+        "mean_reward": 0.6326667348779949,
+        "std_reward": 0.23056210253152853,
+        "cumulative_reward": 3163.3336743899745,
+        "cumulative_regret": 733.6605030924287,
+        "mean_regret": 0.14673210061848574,
+        "final_regret_rate": 0.09056589886165108,
+        "optimal_action_rate": 0.1304,
+        "overtraining_rate": 0.0044,
+        "mean_auc": 0.7690841736694678,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.09384043691475374,
+        "convergence_episode": 1075
+      },
+      "neural_linear": {
+        "mean_reward": 0.6640707880911636,
+        "std_reward": 0.2062521654344251,
+        "cumulative_reward": 3320.353940455818,
+        "cumulative_regret": 573.3896527814758,
+        "mean_regret": 0.11467793055629516,
+        "final_regret_rate": 0.0727757761750781,
+        "optimal_action_rate": 0.1542,
+        "overtraining_rate": 0.002,
+        "mean_auc": 0.7739338935574229,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.07205232237924064,
+        "convergence_episode": 1200
+      }
+    },
+    "seed_4": {
+      "random": {
+        "mean_reward": 0.45825534897451287,
+        "std_reward": 0.36804177403720206,
+        "cumulative_reward": 2291.2767448725644,
+        "cumulative_regret": 1616.7163583718896,
+        "mean_regret": 0.32334327167437793,
+        "final_regret_rate": 0.3076538211212907,
+        "optimal_action_rate": 0.0614,
+        "overtraining_rate": 0.0272,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.0035298054092082753,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.5259989690151612,
+        "std_reward": 0.2141187175778643,
+        "cumulative_reward": 2629.994845075806,
+        "cumulative_regret": 1279.0969565856017,
+        "mean_regret": 0.25581939131712034,
+        "final_regret_rate": 0.25556198964389076,
+        "optimal_action_rate": 0.0232,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4823583333333333,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": -0.002887964723597425,
+        "convergence_episode": 61
+      },
+      "beta_ts": {
+        "mean_reward": 0.6100047391865931,
+        "std_reward": 0.2079568332960457,
+        "cumulative_reward": 3050.023695932966,
+        "cumulative_regret": 851.1655253402973,
+        "mean_regret": 0.17023310506805947,
+        "final_regret_rate": 0.15759839303753717,
+        "optimal_action_rate": 0.1098,
+        "overtraining_rate": 0.001,
+        "mean_auc": 0.6598243697478992,
+        "actions_used": 18,
+        "actions_used_above_1pct": 8,
+        "learning_improvement": 0.012993298875850323,
+        "convergence_episode": 80
+      },
+      "lin_ts": {
+        "mean_reward": 0.6313210714220691,
+        "std_reward": 0.23236799420372045,
+        "cumulative_reward": 3156.6053571103453,
+        "cumulative_regret": 742.0643848508112,
+        "mean_regret": 0.14841287697016223,
+        "final_regret_rate": 0.09299683329758428,
+        "optimal_action_rate": 0.1466,
+        "overtraining_rate": 0.0046,
+        "mean_auc": 0.7894789915966387,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.0794915668573678,
+        "convergence_episode": 1840
+      },
+      "neural_linear": {
+        "mean_reward": 0.663340610868188,
+        "std_reward": 0.20388507112999288,
+        "cumulative_reward": 3316.70305434094,
+        "cumulative_regret": 575.3801573707506,
+        "mean_regret": 0.11507603147415012,
+        "final_regret_rate": 0.07196461338646228,
+        "optimal_action_rate": 0.1734,
+        "overtraining_rate": 0.0014,
+        "mean_auc": 0.7866948179271709,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.06812528912358795,
+        "convergence_episode": 1794
+      }
+    },
+    "seed_5": {
+      "random": {
+        "mean_reward": 0.4567278136389259,
+        "std_reward": 0.36150933821319575,
+        "cumulative_reward": 2283.6390681946295,
+        "cumulative_regret": 1617.3005452815912,
+        "mean_regret": 0.3234601090563182,
+        "final_regret_rate": 0.30598144496233737,
+        "optimal_action_rate": 0.0586,
+        "overtraining_rate": 0.0286,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.014899203172454967,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.4927509497948875,
+        "std_reward": 0.21974012394509984,
+        "cumulative_reward": 2463.7547489744375,
+        "cumulative_regret": 1444.9487847948913,
+        "mean_regret": 0.28898975695897827,
+        "final_regret_rate": 0.28469803291006146,
+        "optimal_action_rate": 0.019,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.48008088235294116,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.0045421059785275,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.6266994895124451,
+        "std_reward": 0.19682237259870233,
+        "cumulative_reward": 3133.4974475622257,
+        "cumulative_regret": 752.9851445769548,
+        "mean_regret": 0.15059702891539095,
+        "final_regret_rate": 0.14163102526394017,
+        "optimal_action_rate": 0.0988,
+        "overtraining_rate": 0.0004,
+        "mean_auc": 0.6243181372549019,
+        "actions_used": 18,
+        "actions_used_above_1pct": 7,
+        "learning_improvement": 0.005821632375401231,
+        "convergence_episode": 95
+      },
+      "lin_ts": {
+        "mean_reward": 0.6254974449967251,
+        "std_reward": 0.22608916100028748,
+        "cumulative_reward": 3127.4872249836258,
+        "cumulative_regret": 759.0028125483586,
+        "mean_regret": 0.15180056250967172,
+        "final_regret_rate": 0.09861746569571517,
+        "optimal_action_rate": 0.137,
+        "overtraining_rate": 0.003,
+        "mean_auc": 0.7784446778711485,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.08584146818225202,
+        "convergence_episode": 1828
+      },
+      "neural_linear": {
+        "mean_reward": 0.6582658859087915,
+        "std_reward": 0.20266985029451925,
+        "cumulative_reward": 3291.3294295439578,
+        "cumulative_regret": 591.3431681581059,
+        "mean_regret": 0.11826863363162117,
+        "final_regret_rate": 0.08203910717820576,
+        "optimal_action_rate": 0.1618,
+        "overtraining_rate": 0.0032,
+        "mean_auc": 0.760447619047619,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.06799305415751555,
+        "convergence_episode": 1115
+      }
+    },
+    "seed_6": {
+      "random": {
+        "mean_reward": 0.45472768704984184,
+        "std_reward": 0.36065145397748405,
+        "cumulative_reward": 2273.638435249209,
+        "cumulative_regret": 1619.325500270384,
+        "mean_regret": 0.3238651000540768,
+        "final_regret_rate": 0.30585621723478773,
+        "optimal_action_rate": 0.0566,
+        "overtraining_rate": 0.0318,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.019863799348240452,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.5042947374068161,
+        "std_reward": 0.21129902997499406,
+        "cumulative_reward": 2521.4736870340803,
+        "cumulative_regret": 1370.4926889277065,
+        "mean_regret": 0.2740985377855413,
+        "final_regret_rate": 0.27487124188388695,
+        "optimal_action_rate": 0.0182,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4797333333333334,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.004207075476487465,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.6193016678644198,
+        "std_reward": 0.1965870101227078,
+        "cumulative_reward": 3096.508339322099,
+        "cumulative_regret": 792.5121975338157,
+        "mean_regret": 0.15850243950676313,
+        "final_regret_rate": 0.14012526070942383,
+        "optimal_action_rate": 0.121,
+        "overtraining_rate": 0.0008,
+        "mean_auc": 0.6721009803921569,
+        "actions_used": 18,
+        "actions_used_above_1pct": 10,
+        "learning_improvement": 0.03269553167398098,
+        "convergence_episode": 150
+      },
+      "lin_ts": {
+        "mean_reward": 0.6232067399743936,
+        "std_reward": 0.23418554886440096,
+        "cumulative_reward": 3116.0336998719677,
+        "cumulative_regret": 768.6651587593772,
+        "mean_regret": 0.15373303175187544,
+        "final_regret_rate": 0.09641094612860121,
+        "optimal_action_rate": 0.1458,
+        "overtraining_rate": 0.006,
+        "mean_auc": 0.7916124649859944,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.09295987599753686,
+        "convergence_episode": 1984
+      },
+      "neural_linear": {
+        "mean_reward": 0.658035226916835,
+        "std_reward": 0.20477602912217233,
+        "cumulative_reward": 3290.176134584175,
+        "cumulative_regret": 591.6026410655098,
+        "mean_regret": 0.11832052821310196,
+        "final_regret_rate": 0.07031363250040246,
+        "optimal_action_rate": 0.1696,
+        "overtraining_rate": 0.0028,
+        "mean_auc": 0.7792697478991597,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.0814255604875781,
+        "convergence_episode": 1739
+      }
+    },
+    "seed_7": {
+      "random": {
+        "mean_reward": 0.46367920995507955,
+        "std_reward": 0.36155998299937964,
+        "cumulative_reward": 2318.396049775398,
+        "cumulative_regret": 1619.031504218503,
+        "mean_regret": 0.3238063008437006,
+        "final_regret_rate": 0.3263133066020582,
+        "optimal_action_rate": 0.0618,
+        "overtraining_rate": 0.0268,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.007874769239131107,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.49524361334123385,
+        "std_reward": 0.22824812627529353,
+        "cumulative_reward": 2476.2180667061693,
+        "cumulative_regret": 1457.066328255687,
+        "mean_regret": 0.2914132656511374,
+        "final_regret_rate": 0.29738049339132555,
+        "optimal_action_rate": 0.019,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4799901960784314,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": -0.01455047328453124,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.625221939723686,
+        "std_reward": 0.20824392263862695,
+        "cumulative_reward": 3126.1096986184302,
+        "cumulative_regret": 799.7903859322585,
+        "mean_regret": 0.1599580771864517,
+        "final_regret_rate": 0.13744716228234644,
+        "optimal_action_rate": 0.152,
+        "overtraining_rate": 0.0008,
+        "mean_auc": 0.6593359943977591,
+        "actions_used": 18,
+        "actions_used_above_1pct": 7,
+        "learning_improvement": 0.009914447646330204,
+        "convergence_episode": 74
+      },
+      "lin_ts": {
+        "mean_reward": 0.6382453899302758,
+        "std_reward": 0.23195822660043622,
+        "cumulative_reward": 3191.226949651379,
+        "cumulative_regret": 731.327291474011,
+        "mean_regret": 0.1462654582948022,
+        "final_regret_rate": 0.08914484403868275,
+        "optimal_action_rate": 0.1508,
+        "overtraining_rate": 0.0054,
+        "mean_auc": 0.792949299719888,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.08244230943054698,
+        "convergence_episode": 1374
+      },
+      "neural_linear": {
+        "mean_reward": 0.6592116208913844,
+        "std_reward": 0.20651283800533812,
+        "cumulative_reward": 3296.058104456922,
+        "cumulative_regret": 625.3771261791497,
+        "mean_regret": 0.12507542523582996,
+        "final_regret_rate": 0.08276497636230695,
+        "optimal_action_rate": 0.164,
+        "overtraining_rate": 0.003,
+        "mean_auc": 0.7760936974789916,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.0607766199611639,
+        "convergence_episode": 992
+      }
+    },
+    "seed_8": {
+      "random": {
+        "mean_reward": 0.46290309569798826,
+        "std_reward": 0.3495602075208219,
+        "cumulative_reward": 2314.5154784899414,
+        "cumulative_regret": 1583.177043474327,
+        "mean_regret": 0.3166354086948654,
+        "final_regret_rate": 0.3072096368542958,
+        "optimal_action_rate": 0.0596,
+        "overtraining_rate": 0.0256,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.011783075889630124,
+        "convergence_episode": 123
+      },
+      "rule_based": {
+        "mean_reward": 0.5096181021628292,
+        "std_reward": 0.21110692588079746,
+        "cumulative_reward": 2548.090510814146,
+        "cumulative_regret": 1346.5132380654084,
+        "mean_regret": 0.26930264761308165,
+        "final_regret_rate": 0.2648503475927958,
+        "optimal_action_rate": 0.0176,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4793176470588235,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.0040445346475440624,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.6226213328328336,
+        "std_reward": 0.19942848452643358,
+        "cumulative_reward": 3113.106664164168,
+        "cumulative_regret": 777.2450601085179,
+        "mean_regret": 0.15544901202170358,
+        "final_regret_rate": 0.15027151760785182,
+        "optimal_action_rate": 0.109,
+        "overtraining_rate": 0.0008,
+        "mean_auc": 0.6813086134453781,
+        "actions_used": 18,
+        "actions_used_above_1pct": 10,
+        "learning_improvement": 0.01149486436807945,
+        "convergence_episode": 104
+      },
+      "lin_ts": {
+        "mean_reward": 0.6248070540589672,
+        "std_reward": 0.2295580885054037,
+        "cumulative_reward": 3124.0352702948358,
+        "cumulative_regret": 762.895034641564,
+        "mean_regret": 0.1525790069283128,
+        "final_regret_rate": 0.09697890587813586,
+        "optimal_action_rate": 0.1396,
+        "overtraining_rate": 0.0062,
+        "mean_auc": 0.7840001400560225,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.08458763153886373,
+        "convergence_episode": 1719
+      },
+      "neural_linear": {
+        "mean_reward": 0.6546963152178988,
+        "std_reward": 0.20707915283377973,
+        "cumulative_reward": 3273.4815760894944,
+        "cumulative_regret": 611.3681919318396,
+        "mean_regret": 0.12227363838636793,
+        "final_regret_rate": 0.07575791512524711,
+        "optimal_action_rate": 0.1594,
+        "overtraining_rate": 0.0024,
+        "mean_auc": 0.7825023809523809,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.080794308301264,
+        "convergence_episode": 1731
+      }
+    },
+    "seed_9": {
+      "random": {
+        "mean_reward": 0.4695603728620326,
+        "std_reward": 0.35014581516675164,
+        "cumulative_reward": 2347.801864310163,
+        "cumulative_regret": 1531.7795743895351,
+        "mean_regret": 0.30635591487790703,
+        "final_regret_rate": 0.3061320968625672,
+        "optimal_action_rate": 0.0628,
+        "overtraining_rate": 0.027,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": -0.0007295188914857031,
+        "convergence_episode": 103
+      },
+      "rule_based": {
+        "mean_reward": 0.5189751786440576,
+        "std_reward": 0.20839398284259164,
+        "cumulative_reward": 2594.875893220288,
+        "cumulative_regret": 1285.420857513256,
+        "mean_regret": 0.25708417150265117,
+        "final_regret_rate": 0.2543455944287242,
+        "optimal_action_rate": 0.0238,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4823549019607843,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.0038320896236200275,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.6323859356450714,
+        "std_reward": 0.1956520340369445,
+        "cumulative_reward": 3161.929678225357,
+        "cumulative_regret": 709.5096895955929,
+        "mean_regret": 0.1419019379191186,
+        "final_regret_rate": 0.1255937472534672,
+        "optimal_action_rate": 0.1156,
+        "overtraining_rate": 0.0006,
+        "mean_auc": 0.691769117647059,
+        "actions_used": 18,
+        "actions_used_above_1pct": 11,
+        "learning_improvement": 0.01213100274407064,
+        "convergence_episode": 225
+      },
+      "lin_ts": {
+        "mean_reward": 0.6244510354183358,
+        "std_reward": 0.2354561566231966,
+        "cumulative_reward": 3122.255177091679,
+        "cumulative_regret": 745.5657874254678,
+        "mean_regret": 0.14911315748509354,
+        "final_regret_rate": 0.09195085521808018,
+        "optimal_action_rate": 0.1338,
+        "overtraining_rate": 0.0062,
+        "mean_auc": 0.7648212885154062,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.08149454359785868,
+        "convergence_episode": 1168
+      },
+      "neural_linear": {
+        "mean_reward": 0.6603133507236614,
+        "std_reward": 0.1937497209017256,
+        "cumulative_reward": 3301.566753618307,
+        "cumulative_regret": 565.1674901341062,
+        "mean_regret": 0.11303349802682124,
+        "final_regret_rate": 0.07655662810641252,
+        "optimal_action_rate": 0.1578,
+        "overtraining_rate": 0.0028,
+        "mean_auc": 0.7692714285714286,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.05543968759461493,
+        "convergence_episode": 901
+      }
+    },
+    "seed_10": {
+      "random": {
+        "mean_reward": 0.45813059146846424,
+        "std_reward": 0.36308830527949765,
+        "cumulative_reward": 2290.6529573423213,
+        "cumulative_regret": 1614.248881924499,
+        "mean_regret": 0.3228497763848998,
+        "final_regret_rate": 0.32973947160341344,
+        "optimal_action_rate": 0.0694,
+        "overtraining_rate": 0.0328,
+        "mean_auc": 0.5,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.0016073507414296473,
+        "convergence_episode": 51
+      },
+      "rule_based": {
+        "mean_reward": 0.5211150753415498,
+        "std_reward": 0.20267164780241917,
+        "cumulative_reward": 2605.575376707749,
+        "cumulative_regret": 1297.0144383412937,
+        "mean_regret": 0.25940288766825875,
+        "final_regret_rate": 0.25483818410081943,
+        "optimal_action_rate": 0.0192,
+        "overtraining_rate": 0.0,
+        "mean_auc": 0.4798117647058823,
+        "actions_used": 3,
+        "actions_used_above_1pct": 3,
+        "learning_improvement": 0.001842954902099292,
+        "convergence_episode": 51
+      },
+      "beta_ts": {
+        "mean_reward": 0.6317131148357222,
+        "std_reward": 0.19330383800677084,
+        "cumulative_reward": 3158.5655741786113,
+        "cumulative_regret": 731.6350950889689,
+        "mean_regret": 0.14632701901779377,
+        "final_regret_rate": 0.13820618957189518,
+        "optimal_action_rate": 0.1492,
+        "overtraining_rate": 0.0004,
+        "mean_auc": 0.6812653361344537,
+        "actions_used": 18,
+        "actions_used_above_1pct": 9,
+        "learning_improvement": 0.0072626784708422765,
+        "convergence_episode": 66
+      },
+      "lin_ts": {
+        "mean_reward": 0.6256917238625553,
+        "std_reward": 0.22935235525659353,
+        "cumulative_reward": 3128.4586193127766,
+        "cumulative_regret": 769.9343116904423,
+        "mean_regret": 0.15398686233808848,
+        "final_regret_rate": 0.1013855684080903,
+        "optimal_action_rate": 0.122,
+        "overtraining_rate": 0.0048,
+        "mean_auc": 0.7714897759103642,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.08229454306971906,
+        "convergence_episode": 822
+      },
+      "neural_linear": {
+        "mean_reward": 0.666196399287622,
+        "std_reward": 0.19489818511686868,
+        "cumulative_reward": 3330.98199643811,
+        "cumulative_regret": 561.3642112257716,
+        "mean_regret": 0.11227284224515431,
+        "final_regret_rate": 0.0670509810384779,
+        "optimal_action_rate": 0.1732,
+        "overtraining_rate": 0.0016,
+        "mean_auc": 0.7794578431372549,
+        "actions_used": 18,
+        "actions_used_above_1pct": 18,
+        "learning_improvement": 0.07296072122511055,
+        "convergence_episode": 1450
+      }
+    }
+  }
+}

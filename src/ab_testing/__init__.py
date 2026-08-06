@@ -1,10 +1,9 @@
 """
 A/B Testing Module
 
-This module will contain:
-- Experiment framework
-- Statistical testing
-- Safety constraints
+Statistical testing framework for comparing recommendation strategies.
 """
 
-# Placeholder - to be implemented
+from src.ab_testing.experiment_framework import ABExperiment, ExperimentTracker
+
+__all__ = ["ABExperiment", "ExperimentTracker"]

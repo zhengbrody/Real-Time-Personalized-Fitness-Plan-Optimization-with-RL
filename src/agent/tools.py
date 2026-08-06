@@ -4,9 +4,12 @@ Agent Tools - Functions that the AI Coach Agent can call.
 These tools enable the agent to take actions in the system.
 """
 
+import logging
 from typing import Dict, List, Optional
 from datetime import datetime
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class AgentTools:
@@ -365,7 +368,7 @@ class AgentTools:
                 self.kafka_producer.send(topic, value=json.dumps(event))
                 self.kafka_producer.flush()
             except Exception as e:
-                print(f"Error logging event to Kafka: {e}")
+                logger.error(f"Error logging event to Kafka: {e}")
 
         return {
             "success": True,

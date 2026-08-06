@@ -4,9 +4,12 @@ Feature Engineering for RL Model
 Creates features for contextual bandits from daily unified data.
 """
 
+import logging
 import pandas as pd
 import numpy as np
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 
 class FeatureEngineer:
@@ -229,44 +232,44 @@ def main():
 
     sys.path.append(str(Path(__file__).parent.parent.parent))
 
-    print("=" * 70)
-    print("FEATURE ENGINEERING")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("FEATURE ENGINEERING")
+    logger.info("=" * 70)
 
     # Load unified data
     unified_path = Path("data/processed/unified_daily.parquet")
 
     if not unified_path.exists():
-        print("✗ Unified data not found. Run preprocessing first:")
-        print("  python src/data_collection/preprocess.py")
+        logger.error("✗ Unified data not found. Run preprocessing first:")
+        logger.info("  python src/data_collection/preprocess.py")
         return
 
     unified_df = pd.read_parquet(unified_path)
-    print(f"✓ Loaded unified data: {len(unified_df)} records")
+    logger.info(f"✓ Loaded unified data: {len(unified_df)} records")
 
     # Engineer features
     engineer = FeatureEngineer()
     features_df = engineer.create_daily_features(unified_df)
 
-    print(f"\n✓ Created features: {len(features_df.columns)} columns")
-    print(f"  Feature list: {len(engineer.get_feature_list())} features")
+    logger.info(f"\n✓ Created features: {len(features_df.columns)} columns")
+    logger.info(f"  Feature list: {len(engineer.get_feature_list())} features")
 
     # Save
     output_path = Path("data/features/daily_features.parquet")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     features_df.to_parquet(output_path, index=False)
-    print(f"\n✓ Saved features to {output_path}")
+    logger.info(f"\n✓ Saved features to {output_path}")
 
     # Summary
-    print("\n" + "=" * 70)
-    print("FEATURE SUMMARY")
-    print("=" * 70)
-    print(f"\nTotal features: {len(features_df.columns)}")
-    print("\nSample features:")
+    logger.info("\n" + "=" * 70)
+    logger.info("FEATURE SUMMARY")
+    logger.info("=" * 70)
+    logger.info(f"\nTotal features: {len(features_df.columns)}")
+    logger.info("\nSample features:")
     for feat in engineer.get_feature_list()[:15]:
         if feat in features_df.columns:
             non_null = features_df[feat].notna().sum()
-            print(f"  ✓ {feat}: {non_null}/{len(features_df)} non-null")
+            logger.info(f"  ✓ {feat}: {non_null}/{len(features_df)} non-null")
 
 
 if __name__ == "__main__":

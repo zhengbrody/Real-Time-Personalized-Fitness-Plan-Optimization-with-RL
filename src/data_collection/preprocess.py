@@ -4,10 +4,13 @@ Data Preprocessing Pipeline
 Unifies multi-source data (Apple Watch, Oura, PMData) into a single daily schema.
 """
 
+import logging
 import sys
 from pathlib import Path
 import pandas as pd
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -252,83 +255,83 @@ class DataPreprocessor:
         """Save unified data to parquet."""
         output_path = self.output_dir / filename
         unified_df.to_parquet(output_path, index=False)
-        print(f"✓ Saved unified data to {output_path}")
+        logger.info(f"✓ Saved unified data to {output_path}")
         return output_path
 
 
 def main():
     """Main preprocessing function."""
-    print("=" * 70)
-    print("DATA PREPROCESSING PIPELINE")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("DATA PREPROCESSING PIPELINE")
+    logger.info("=" * 70)
 
     preprocessor = DataPreprocessor()
 
     # Process Apple Watch
-    print("\n[1/3] Processing Apple Watch data...")
+    logger.info("\n[1/3] Processing Apple Watch data...")
     apple_xml = Path("data/raw/apple/export.xml")
     if apple_xml.exists():
         apple_daily = preprocessor.preprocess_apple_watch(str(apple_xml))
-        print(f"✓ Apple Watch: {len(apple_daily)} daily records")
+        logger.info(f"✓ Apple Watch: {len(apple_daily)} daily records")
     else:
-        print("✗ Apple Watch XML not found")
+        logger.warning("✗ Apple Watch XML not found")
         apple_daily = pd.DataFrame()
 
     # Process Oura
-    print("\n[2/3] Processing Oura data...")
+    logger.info("\n[2/3] Processing Oura data...")
     oura_csv = Path("data/raw/oura/oura_2025-11-01_2026-01-01_trends.csv")
     if oura_csv.exists():
         oura_daily = preprocessor.preprocess_oura(str(oura_csv))
-        print(f"✓ Oura: {len(oura_daily)} daily records")
+        logger.info(f"✓ Oura: {len(oura_daily)} daily records")
     else:
-        print("✗ Oura CSV not found")
+        logger.warning("✗ Oura CSV not found")
         oura_daily = pd.DataFrame()
 
     # Process PMData (optional)
-    print("\n[3/3] Processing PMData...")
+    logger.info("\n[3/3] Processing PMData...")
     pmdata_dir = Path("data/public/pmdata")
     if pmdata_dir.exists():
         pmdata_daily = preprocessor.preprocess_pmdata(str(pmdata_dir))
-        print(f"✓ PMData: {len(pmdata_daily)} records")
+        logger.info(f"✓ PMData: {len(pmdata_daily)} records")
     else:
-        print("⚠ PMData not found, skipping")
+        logger.warning("⚠ PMData not found, skipping")
         pmdata_daily = None
 
     # Unify
-    print("\n" + "=" * 70)
-    print("UNIFYING DATA")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("UNIFYING DATA")
+    logger.info("=" * 70)
 
     if not apple_daily.empty or not oura_daily.empty:
         unified = preprocessor.unify_daily_data(apple_daily, oura_daily, pmdata_daily)
 
-        print(f"\n✓ Unified dataset: {len(unified)} daily records")
-        print(f"  Columns: {len(unified.columns)}")
-        print(f"\nSample columns: {list(unified.columns[:10])}")
+        logger.info(f"\n✓ Unified dataset: {len(unified)} daily records")
+        logger.info(f"  Columns: {len(unified.columns)}")
+        logger.info(f"\nSample columns: {list(unified.columns[:10])}")
 
         # Save
         preprocessor.save_unified_data(unified)
 
         # Coverage report
-        print("\n" + "=" * 70)
-        print("COVERAGE REPORT")
-        print("=" * 70)
+        logger.info("\n" + "=" * 70)
+        logger.info("COVERAGE REPORT")
+        logger.info("=" * 70)
 
         if "readiness_score" in unified.columns:
             coverage = unified["readiness_score"].notna().sum() / len(unified) * 100
-            print(f"Readiness score coverage: {coverage:.1f}%")
+            logger.info(f"Readiness score coverage: {coverage:.1f}%")
 
         if "sleep_duration_hours" in unified.columns:
             coverage = (
                 unified["sleep_duration_hours"].notna().sum() / len(unified) * 100
             )
-            print(f"Sleep coverage: {coverage:.1f}%")
+            logger.info(f"Sleep coverage: {coverage:.1f}%")
 
         if "steps" in unified.columns:
             coverage = unified["steps"].notna().sum() / len(unified) * 100
-            print(f"Steps coverage: {coverage:.1f}%")
+            logger.info(f"Steps coverage: {coverage:.1f}%")
     else:
-        print("✗ No data to unify")
+        logger.error("✗ No data to unify")
 
 
 if __name__ == "__main__":

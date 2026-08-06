@@ -93,3 +93,10 @@ kafka-logs/
 .DS_Store
 Thumbs.db
 
+
+# Claude Code scratch worktrees
+.claude/
+
+# Coverage artifacts
+.coverage
+.coverage.*

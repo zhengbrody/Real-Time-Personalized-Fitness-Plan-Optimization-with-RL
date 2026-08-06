@@ -35,18 +35,18 @@ defusedxml>=0.0.1
 # Optional: Data Collection
 # python-oura>=2.0.0  # Install manually if needed: pip install python-oura
 
-# Optional: Streaming & Message Queues (uncomment if using Kafka)
-# kafka-python>=2.0.2
-# confluent-kafka>=2.3.0
+# Deep Bayesian bandit (NeuralLinear encoder)
+torch>=2.0.0
 
-# Optional: Big Data (uncomment if needed)
-# pyspark>=3.4.0
+# Online feature cache
+redis>=5.0.0
 
-# Optional: Feature Store (uncomment if needed)
-# feast>=0.36.0
+# Offline feature pipeline
+pyspark>=3.5.0
 
-# Optional: Model Serving with PyTorch (uncomment if needed)
-# torch>=2.0.0
-# torchserve>=0.8.0
-# torch-model-archiver>=0.8.0
+# Online-learning feedback stream
+kafka-python-ng>=2.2.0
+
+# HTTP client used by the latency benchmark
+httpx>=0.25.0
 

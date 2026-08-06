@@ -9,7 +9,8 @@ class TestRewardFunction:
 
     def test_initialization(self):
         rf = RewardFunction()
-        assert rf is not None
+        assert hasattr(rf, "compute_reward")
+        assert callable(rf.compute_reward)
 
     def test_positive_reward_for_completion(self):
         rf = RewardFunction()

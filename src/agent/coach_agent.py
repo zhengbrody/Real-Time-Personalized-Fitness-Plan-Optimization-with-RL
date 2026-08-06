@@ -8,12 +8,14 @@ This agent uses LLM with tool calling to:
 - Enable closed-loop learning
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import json
 from .state import DailyState, DailyStateBuilder
 from .safety import SafetyGuardrails, SafetyCheckResult
 from .tools import AgentTools
 from .llm_client import LLMClient
+from .memory import CoachMemory
+from .session_handoff import session_handoff
 
 
 class CoachAgent:
@@ -27,7 +29,13 @@ class CoachAgent:
     """
 
     def __init__(
-        self, llm_client=None, kafka_producer=None, plan_service=None, provider="openai"
+        self,
+        llm_client=None,
+        kafka_producer=None,
+        plan_service=None,
+        provider="openai",
+        memory_path: Optional[str] = None,
+        user_id: str = "default",
     ):
         """
         Initialize Coach Agent.
@@ -37,6 +45,8 @@ class CoachAgent:
             kafka_producer: Kafka producer for event logging
             plan_service: Service for plan management
             provider: LLM provider ("openai" or "anthropic")
+            memory_path: Path to JSON memory file (enables cross-session persistence)
+            user_id: User identifier used for memory
         """
         if llm_client is None:
             try:
@@ -49,6 +59,12 @@ class CoachAgent:
         self.state_builder = DailyStateBuilder()
         self.safety = SafetyGuardrails()
         self.tools = AgentTools(kafka_producer, plan_service)
+
+        # Cross-session memory (optional)
+        self.memory: Optional[CoachMemory] = None
+        if memory_path is not None:
+            self.memory = CoachMemory(user_id=user_id, memory_path=memory_path)
+            self.memory.load()
 
         # System prompt for the agent
         self.system_prompt = self._get_system_prompt()
@@ -97,6 +113,23 @@ Be conversational, supportive, and data-driven. Use the user's body state data t
         state = self.state_builder.build_state(user_id)
         state = self.state_builder.update_from_feature_store(state)
 
+        # Inject active injuries from memory into state (for safety checks)
+        if self.memory is not None:
+            active_injuries = self.memory.get_active_injuries()
+            for injury in active_injuries:
+                body_part = injury.get("body_part", "")
+                if body_part and body_part not in state.injury_history:
+                    state.injury_history.append(body_part)
+
+        # Inject memory context into system prompt for this request
+        if self.memory is not None:
+            memory_context = self.memory.get_context_summary()
+            self.system_prompt = (
+                self._get_system_prompt()
+                + "\n\n--- User History ---\n"
+                + memory_context
+            )
+
         # Safety check
         safety_result = self.safety.check_state(state)
         if not safety_result.is_safe:
@@ -121,6 +154,21 @@ Be conversational, supportive, and data-driven. Use the user's body state data t
         else:
             # Daily proactive message
             response = self._generate_daily_message(user_id, state, recommended_plan)
+
+        # Session handoff — persist to memory
+        if self.memory is not None:
+            session_handoff(
+                self.memory,
+                recommendations=[recommended_plan.get("rationale", "")],
+                mood=str(state.mood_score) if state.mood_score else None,
+                compliance_rate=(
+                    state.completion_rate_last_week
+                    if state.completion_rate_last_week is not None
+                    else 0.0
+                ),
+                plan=recommended_plan,
+                tools_called=response.get("tools_called", []),
+            )
 
         return response
 
@@ -188,8 +236,8 @@ Be conversational, supportive, and data-driven. Use the user's body state data t
             ]
 
             # Call LLM with tool calling
-            response = self.llm_client.chat.completions.create(
-                model="gpt-4",  # or your preferred model
+            response = self.llm_client.client.chat.completions.create(
+                model=self.llm_client.model,
                 messages=messages,
                 tools=self.tools.get_tool_definitions(),
                 tool_choice="auto",
@@ -213,8 +261,8 @@ Be conversational, supportive, and data-driven. Use the user's body state data t
                 },
             ]
 
-            response = self.llm_client.chat.completions.create(
-                model="gpt-4",
+            response = self.llm_client.client.chat.completions.create(
+                model=self.llm_client.model,
                 messages=messages,
                 tools=self.tools.get_tool_definitions(),
                 tool_choice="auto",
