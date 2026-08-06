@@ -387,4 +387,13 @@ safety gate failing closed on missing fields.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Not a medical device; the recommendations here are
+not clinical advice.
+
+---
+
+## Contact
+
+**Author**: zheng dong · [LinkedIn](https://www.linkedin.com/in/zhengdong17/) · zhengdong0317@gmail.com
+
+⭐ Star if useful · Issues welcome · PRs open
