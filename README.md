@@ -2,8 +2,8 @@
 
 > NeuralLinear Thompson Sampling (PyTorch) · Off-policy evaluation with ground-truth calibration · Shared feature transform · FastAPI + Redis + Kafka + PySpark
 
-[![CI](https://github.com/zhengbrody/RL/actions/workflows/ci.yml/badge.svg)](https://github.com/zhengbrody/RL/actions)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/zhengbrody/Real-Time-Personalized-Fitness-Plan-Optimization-with-RL/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/zhengbrody/Real-Time-Personalized-Fitness-Plan-Optimization-with-RL/actions/workflows/ci.yml)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A daily training recommender: given today's physiological state, choose one of
